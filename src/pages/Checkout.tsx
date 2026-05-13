@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -11,7 +11,6 @@ import {
   CreditCard,
   Loader,
   ChevronRight,
-  Shield,
   Award,
   Clock,
   Instagram,
@@ -36,8 +35,10 @@ const C = {
   successGreen: '#4f8a4f',
 } as const
 
-const easeSmooth = 'cubic-bezier(0.23, 1, 0.32, 1)'
-const easeExpoOut = 'cubic-bezier(0.16, 1, 0.3, 1)'
+const _easeSmooth = 'cubic-bezier(0.23, 1, 0.32, 1)'
+const _easeExpoOut = 'cubic-bezier(0.16, 1, 0.3, 1)'
+void _easeSmooth
+void _easeExpoOut
 
 /* ------------------------------------------------------------------ */
 /*  TYPES                                                               */
@@ -1086,9 +1087,14 @@ function Step2Details({
             onDrop={(e) => {
               e.preventDefault()
               if (e.dataTransfer.files.length > 0) {
-                setUploadedFiles(
-                  Array.from(e.dataTransfer.files).map((f) => f.name)
-                )
+                const dt = new DataTransfer()
+                Array.from(e.dataTransfer.files).forEach((f) => dt.items.add(f))
+                const syntheticEvent = {
+                  currentTarget: {
+                    files: dt.files,
+                  },
+                } as React.ChangeEvent<HTMLInputElement>
+                onFileUpload(syntheticEvent)
               }
             }}
             style={{
@@ -1224,6 +1230,7 @@ function Step3Payment({
   setRoadLegalConfirmed,
   plateType,
   errors,
+  setErrors,
   totalPrice,
   isSubmitting,
   onBack,

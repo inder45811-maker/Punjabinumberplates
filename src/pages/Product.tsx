@@ -12,7 +12,6 @@ import {
   X,
   Minus,
   Plus,
-  ChevronRight,
   ShoppingCart,
   MapPin,
   ClipboardList,
