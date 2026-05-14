@@ -1,6 +1,8 @@
 import { Routes, Route } from 'react-router'
 import Layout from './components/Layout'
 import Home from './pages/Home'
+import Product from './pages/Product'
+import Gallery from './pages/Gallery'
 
 function StubPage({ title }: { title: string }) {
   return (
@@ -47,9 +49,9 @@ export default function App() {
     <Layout>
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/product" element={<StubPage title="Product" />} />
+        <Route path="/product" element={<Product />} />
         <Route path="/checkout" element={<StubPage title="Checkout" />} />
-        <Route path="/gallery" element={<StubPage title="Gallery" />} />
+        <Route path="/gallery" element={<Gallery />} />
         <Route path="/legal" element={<StubPage title="Legal" />} />
         <Route path="/contact" element={<StubPage title="Contact" />} />
       </Routes>
