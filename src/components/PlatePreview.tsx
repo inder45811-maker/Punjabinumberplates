@@ -8,49 +8,126 @@ interface PlatePreviewProps {
   showToggle?: boolean
 }
 
-const styleLabels: Record<PlateStyle, string> = {
-  '4d-5mm': '4D 5MM',
-  '4d-gel': '4D GEL',
-  '3d-gel': '3D GEL',
-  'ghost': 'GHOST',
+export const styleConfig: Record<PlateStyle, { label: string; price: number; desc: string }> = {
+  '4d-5mm': { label: '4D 5MM', price: 45, desc: 'Laser-cut acrylic' },
+  '4d-gel':  { label: '4D GEL', price: 55, desc: 'Gloss gel resin' },
+  '3d-gel':  { label: '3D GEL', price: 35, desc: 'Domed resin' },
+  'ghost':   { label: 'GHOST',  price: 70, desc: 'Stealth subtle' },
 }
 
-function GB_Badge({ isRear }: { isRear: boolean }) {
+/* ═══════════════════════════════════════════════
+   GB BADGE — Post-Brexit UK number plate badge
+   ═══════════════════════════════════════════════ */
+function GBBadge() {
   return (
     <svg
-      width="28"
-      height="38"
-      viewBox="0 0 28 38"
-      style={{ flexShrink: 0, height: '70%', alignSelf: 'center' }}
+      width="44"
+      height="94"
+      viewBox="0 0 44 94"
+      style={{ flexShrink: 0, height: '85%', alignSelf: 'center' }}
     >
-      {/* Badge background */}
-      <rect x="0" y="0" width="28" height="38" rx="3" fill={isRear ? '#1d4e9d' : '#1d4e9d'} />
-      {/* Union Jack pattern */}
-      <g opacity="0.6">
-        <rect x="1" y="1" width="12" height="12" fill="#c8102e" />
-        <rect x="15" y="1" width="12" height="12" fill="#fff" />
-        <rect x="1" y="15" width="12" height="12" fill="#012169" />
-        <rect x="15" y="15" width="12" height="12" fill="#c8102e" />
-        {/* Cross overlay */}
-        <rect x="12" y="1" width="4" height="26" fill="#fff" opacity="0.8" />
-        <rect x="1" y="12" width="26" height="4" fill="#fff" opacity="0.8" />
+      <rect x="1" y="1" width="42" height="92" rx="4" fill="#003399" stroke="#1a3a7a" strokeWidth="0.5" />
+      <g clipPath="url(#badgeClip)" opacity="0.7">
+        <rect x="1" y="1" width="42" height="92" fill="#003399" />
+        <rect x="1" y="1" width="42" height="46" fill="#fff" opacity="0.15" />
+        <rect x="18" y="1" width="8" height="92" fill="#fff" opacity="0.3" />
+        <rect x="1" y="40" width="42" height="14" fill="#fff" opacity="0.3" />
+        <rect x="1" y="1" width="42" height="92" fill="none" stroke="#fff" strokeWidth="1" opacity="0.2" />
+        <rect x="20" y="1" width="4" height="92" fill="#cc0000" opacity="0.4" />
+        <rect x="1" y="43" width="42" height="8" fill="#cc0000" opacity="0.4" />
       </g>
-      {/* EU ring removed - post-Brexit */}
-      <text
-        x="14"
-        y="32"
-        textAnchor="middle"
-        fill="#fff"
-        fontFamily="Arial, sans-serif"
-        fontWeight="bold"
-        fontSize="7"
-      >
+      <defs>
+        <clipPath id="badgeClip">
+          <rect x="1" y="1" width="42" height="92" rx="4" />
+        </clipPath>
+      </defs>
+      <text x="22" y="86" textAnchor="middle" fill="#fff" fontFamily="Arial, Helvetica, sans-serif" fontWeight="bold" fontSize="10" letterSpacing="0.5">
         GB
       </text>
     </svg>
   )
 }
 
+/* ═══════════════════════════════════════════════
+   CHARACTER RENDERER — Per-style character styling
+   ═══════════════════════════════════════════════ */
+function PlateChars({ text, style, isRear }: { text: string; style: PlateStyle; isRear: boolean }) {
+  const groups = text.trim().split(/\s+/).filter(Boolean)
+  const totalChars = text.replace(/\s/g, '').length
+  const baseFontSize = totalChars <= 5 ? 3.8 : totalChars <= 7 ? 3.0 : totalChars <= 9 ? 2.4 : 1.9
+
+  const getCharStyle = (): React.CSSProperties => {
+    switch (style) {
+      case '4d-5mm':
+        return {
+          fontFamily: "'Inter', 'Arial Black', 'Helvetica Neue', Arial, sans-serif",
+          fontWeight: 900,
+          fontSize: `${baseFontSize}rem`,
+          letterSpacing: '0.08em',
+          lineHeight: 1,
+          color: '#0a0a0a',
+          textShadow: '0 1px 0 rgba(0,0,0,0.15), 0 2px 0 rgba(0,0,0,0.1), 0 3px 2px rgba(0,0,0,0.15), 0 1px 1px rgba(0,0,0,0.2)',
+          WebkitTextStroke: '0.3px rgba(0,0,0,0.08)',
+        }
+      case '4d-gel':
+        return {
+          fontFamily: "'Inter', 'Arial Black', 'Helvetica Neue', Arial, sans-serif",
+          fontWeight: 900,
+          fontSize: `${baseFontSize}rem`,
+          letterSpacing: '0.08em',
+          lineHeight: 1,
+          color: '#000',
+          textShadow: '0 1px 1px rgba(0,0,0,0.3), 0 2px 3px rgba(0,0,0,0.2), 0 1px 0 rgba(255,255,255,0.1)',
+          WebkitTextStroke: '0.2px rgba(0,0,0,0.05)',
+        }
+      case '3d-gel':
+        return {
+          fontFamily: "'Inter', 'Arial Black', 'Helvetica Neue', Arial, sans-serif",
+          fontWeight: 900,
+          fontSize: `${baseFontSize}rem`,
+          letterSpacing: '0.08em',
+          lineHeight: 1,
+          color: '#111',
+          textShadow: '0 2px 0 rgba(0,0,0,0.2), 0 3px 4px rgba(0,0,0,0.15), 0 1px 2px rgba(0,0,0,0.1)',
+          transform: 'translateY(-1px)',
+        }
+      case 'ghost':
+        return {
+          fontFamily: "'Inter', 'Arial Black', 'Helvetica Neue', Arial, sans-serif",
+          fontWeight: 900,
+          fontSize: `${baseFontSize}rem`,
+          letterSpacing: '0.08em',
+          lineHeight: 1,
+          color: isRear ? 'rgba(20,20,20,0.45)' : 'rgba(20,20,20,0.4)',
+          textShadow: '0 0 1px rgba(0,0,0,0.05)',
+        }
+    }
+  }
+
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 'clamp(4px, 1vw, 12px)',
+      flex: 1,
+      overflow: 'hidden',
+    }}>
+      {groups.map((group, gi) => (
+        <span key={gi} style={{ display: 'inline-flex', whiteSpace: 'nowrap' }}>
+          {gi > 0 && <span style={{ display: 'inline-block', width: 'clamp(6px, 1.5vw, 16px)' }} />}
+          {group.split('').map((char, ci) => (
+            <span key={ci} style={getCharStyle()}>{char}</span>
+          ))}
+        </span>
+      ))}
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════
+   MAIN PLATE PREVIEW COMPONENT
+   ═══════════════════════════════════════════════ */
 export default function PlatePreview({
   registration,
   plateStyle = '4d-5mm',
@@ -58,206 +135,142 @@ export default function PlatePreview({
 }: PlatePreviewProps) {
   const [isRear, setIsRear] = useState(true)
 
-  const text = (registration || 'YOUR REG').toUpperCase()
-  const len = text.length
-  const fontSize = len <= 4 ? '3.2rem' : len <= 6 ? '2.6rem' : len <= 8 ? '2rem' : '1.6rem'
+  const rawText = (registration || 'YOUR REG').toUpperCase()
+  const displayText = rawText.replace(/[^A-Z0-9\s]/g, '')
 
-  const rearBg = '#FFBB00'
-  const frontBg = '#F8F8F8'
+  const rearBg = '#facc15'
+  const frontBg = '#f5f5f5'
   const bg = isRear ? rearBg : frontBg
 
-  // Style-specific character rendering
-  const getCharStyle = (): React.CSSProperties => {
-    const base: React.CSSProperties = {
-      fontFamily: "'Inter', system-ui, sans-serif",
-      fontWeight: 800,
-      fontSize,
-      letterSpacing: '0.06em',
-      lineHeight: 1,
-      color: '#1a1a1a',
-    }
-
-    switch (plateStyle) {
-      case '4d-5mm':
-        return {
-          ...base,
-          textShadow: '1px 1px 0 rgba(0,0,0,0.3), 2px 2px 0 rgba(0,0,0,0.15), 0 2px 4px rgba(0,0,0,0.2)',
-          WebkitTextStroke: '0.5px rgba(0,0,0,0.05)',
-        }
-      case '4d-gel':
-        return {
-          ...base,
-          color: '#000',
-          textShadow: '0 1px 2px rgba(0,0,0,0.4), 0 2px 6px rgba(0,0,0,0.15), inset 0 -1px 1px rgba(255,255,255,0.3)',
-          WebkitTextStroke: '0.3px rgba(0,0,0,0.1)',
-        }
-      case '3d-gel':
-        return {
-          ...base,
-          color: '#1a1a1a',
-          textShadow: '0 2px 0 rgba(0,0,0,0.25), 0 3px 6px rgba(0,0,0,0.15)',
-          transform: 'translateY(-1px)',
-        }
-      case 'ghost':
-        return {
-          ...base,
-          color: isRear ? 'rgba(30,30,30,0.55)' : 'rgba(30,30,30,0.5)',
-          textShadow: '0 0 2px rgba(0,0,0,0.1)',
-        }
-      default:
-        return base
-    }
-  }
-
-  const getPlateBorder = (): string => {
-    switch (plateStyle) {
-      case '4d-5mm':
-        return '3px solid #1a1a1a'
-      case '4d-gel':
-        return '3px solid #0a0a0a'
-      case '3d-gel':
-        return '2.5px solid #1a1a1a'
-      case 'ghost':
-        return isRear ? '2px solid rgba(0,0,0,0.08)' : '2px solid rgba(0,0,0,0.06)'
-      default:
-        return '3px solid #1a1a1a'
-    }
-  }
-
-  const getInnerBorder = (): string => {
-    switch (plateStyle) {
-      case 'ghost':
-        return 'none'
-      default:
-        return '1.5px solid rgba(0,0,0,0.15)'
-    }
-  }
-
-  const getBorderRadius = (): number => {
-    switch (plateStyle) {
-      case '4d-gel':
-        return 6
-      default:
-        return 4
-    }
-  }
+  const styleInfo = styleConfig[plateStyle]
+  const borderRadius = plateStyle === '4d-gel' ? '7px' : '5px'
 
   return (
-    <div style={{ width: '100%' }}>
-      {/* Plate */}
-      <div
-        style={{
+    <div style={{ width: '100%', maxWidth: '100%' }}>
+      {/* The Plate */}
+      <div style={{ position: 'relative', width: '100%', maxWidth: '520px', margin: '0 auto' }}>
+        <div style={{
           backgroundColor: bg,
-          border: getPlateBorder(),
-          borderRadius: `${getBorderRadius()}px`,
-          padding: '8px 10px',
+          border: '1px solid rgba(0,0,0,0.12)',
+          borderRadius,
+          padding: 'clamp(4px, 1.2vw, 8px)',
           display: 'flex',
           alignItems: 'center',
-          gap: '6px',
-          boxShadow: plateStyle === 'ghost'
-            ? '0 1px 3px rgba(0,0,0,0.06)'
-            : '0 4px 20px rgba(0,0,0,0.15), 0 2px 8px rgba(0,0,0,0.1)',
+          gap: 'clamp(4px, 1vw, 8px)',
+          boxShadow: `0 2px 4px rgba(0,0,0,0.08), 0 4px 12px rgba(0,0,0,0.06), inset 0 1px 0 rgba(255,255,255,${isRear ? '0.3' : '0.6'}), inset 0 -1px 0 rgba(0,0,0,0.04)`,
           transition: 'all 0.4s ease',
-          maxWidth: '100%',
-        }}
-      >
-        {/* GB Badge */}
-        <GB_Badge isRear={isRear} />
+          aspectRatio: '520 / 111',
+        }}>
+          {/* Inner border line */}
+          <div style={{
+            position: 'absolute',
+            inset: 'clamp(3px, 0.8vw, 6px)',
+            border: plateStyle === 'ghost' ? '1px solid rgba(0,0,0,0.03)' : '1px solid rgba(0,0,0,0.1)',
+            borderRadius: '3px',
+            pointerEvents: 'none',
+            zIndex: 1,
+          }} />
 
-        {/* Inner border line */}
-        <div
-          style={{
-            borderLeft: getInnerBorder(),
+          {/* GB Badge */}
+          <div style={{ position: 'relative', zIndex: 2, display: 'flex', alignItems: 'center' }}>
+            <GBBadge />
+          </div>
+
+          {/* Vertical separator */}
+          <div style={{
+            width: '1px',
             height: '75%',
-            alignSelf: 'center',
-            opacity: plateStyle === 'ghost' ? 0 : 1,
-          }}
-        />
+            backgroundColor: plateStyle === 'ghost' ? 'rgba(0,0,0,0.04)' : 'rgba(0,0,0,0.12)',
+            flexShrink: 0,
+            position: 'relative',
+            zIndex: 2,
+          }} />
 
-        {/* Registration text */}
-        <div
-          style={{
-            flex: 1,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'hidden',
-            minHeight: '50px',
-          }}
-        >
-          <span style={getCharStyle()}>
-            {text}
-          </span>
+          {/* Registration characters */}
+          <div style={{ position: 'relative', zIndex: 2, flex: 1, display: 'flex', alignItems: 'center', minWidth: 0 }}>
+            <PlateChars text={displayText} style={plateStyle} isRear={isRear} />
+          </div>
+
+          {/* BSAU145e marking */}
+          <div style={{ position: 'absolute', bottom: 'clamp(4px, 1vw, 8px)', right: 'clamp(6px, 1.5vw, 12px)', zIndex: 3 }}>
+            <span style={{
+              fontFamily: "'Arial', sans-serif",
+              fontSize: 'clamp(4px, 1vw, 6px)',
+              color: plateStyle === 'ghost' ? 'rgba(0,0,0,0.15)' : 'rgba(0,0,0,0.25)',
+              letterSpacing: '0.02em',
+              textTransform: 'uppercase',
+            }}>
+              BSAU145e
+            </span>
+          </div>
+
+          {/* PNP manufacturer mark */}
+          <div style={{ position: 'absolute', bottom: 'clamp(4px, 1vw, 8px)', left: '52px', zIndex: 3 }}>
+            <span style={{
+              fontFamily: "'Arial', sans-serif",
+              fontSize: 'clamp(3px, 0.8vw, 5px)',
+              color: plateStyle === 'ghost' ? 'rgba(0,0,0,0.1)' : 'rgba(0,0,0,0.2)',
+              letterSpacing: '0.02em',
+              textTransform: 'uppercase',
+            }}>
+              PNP
+            </span>
+          </div>
         </div>
       </div>
 
-      {/* Front/Rear toggle + Style label */}
+      {/* Controls */}
       {showToggle && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginTop: '10px',
-          }}
-        >
-          <span
-            style={{
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          marginTop: '12px',
+          maxWidth: '520px',
+          marginLeft: 'auto',
+          marginRight: 'auto',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span style={{
               fontFamily: "'JetBrains Mono', monospace",
-              fontSize: '0.65rem',
+              fontSize: '0.7rem',
               letterSpacing: '0.12em',
               color: '#757575',
               textTransform: 'uppercase',
-            }}
-          >
-            {styleLabels[plateStyle]}
-          </span>
+            }}>
+              {styleInfo.label}
+            </span>
+            <span style={{
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '0.7rem',
+              fontWeight: 700,
+              color: '#ffd700',
+            }}>
+              &pound;{styleInfo.price}
+            </span>
+          </div>
 
-          <div
-            style={{
-              display: 'flex',
-              backgroundColor: '#1a1a1a',
-              borderRadius: '9999px',
-              padding: '3px',
-              gap: '2px',
-            }}
-          >
-            <button
-              onClick={() => setIsRear(false)}
-              style={{
-                padding: '5px 14px',
-                borderRadius: '9999px',
-                border: 'none',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: '0.65rem',
-                letterSpacing: '0.08em',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                backgroundColor: !isRear ? '#f2f3f4' : 'transparent',
-                color: !isRear ? '#050401' : '#757575',
-                fontWeight: 700,
-              }}
-            >
-              FRONT
-            </button>
-            <button
-              onClick={() => setIsRear(true)}
-              style={{
-                padding: '5px 14px',
-                borderRadius: '9999px',
-                border: 'none',
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: '0.65rem',
-                letterSpacing: '0.08em',
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-                backgroundColor: isRear ? '#ffd700' : 'transparent',
-                color: isRear ? '#050401' : '#757575',
-                fontWeight: 700,
-              }}
-            >
-              REAR
-            </button>
+          <div style={{
+            display: 'flex',
+            backgroundColor: '#1a1a1a',
+            borderRadius: '9999px',
+            padding: '3px',
+            gap: '2px',
+          }}>
+            <button onClick={() => setIsRear(false)} style={{
+              padding: '5px 14px', borderRadius: '9999px', border: 'none',
+              fontFamily: "'JetBrains Mono', monospace", fontSize: '0.6rem', letterSpacing: '0.1em',
+              cursor: 'pointer', transition: 'all 0.2s ease',
+              backgroundColor: !isRear ? '#f5f5f5' : 'transparent',
+              color: !isRear ? '#050401' : '#757575', fontWeight: 700, textTransform: 'uppercase',
+            }}>Front</button>
+            <button onClick={() => setIsRear(true)} style={{
+              padding: '5px 14px', borderRadius: '9999px', border: 'none',
+              fontFamily: "'JetBrains Mono', monospace", fontSize: '0.6rem', letterSpacing: '0.1em',
+              cursor: 'pointer', transition: 'all 0.2s ease',
+              backgroundColor: isRear ? '#ffd700' : 'transparent',
+              color: isRear ? '#050401' : '#757575', fontWeight: 700, textTransform: 'uppercase',
+            }}>Rear</button>
           </div>
         </div>
       )}
