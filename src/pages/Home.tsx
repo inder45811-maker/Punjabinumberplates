@@ -53,7 +53,7 @@ export default function Home() {
       <CraftSection />
       <GalleryPreviewSection />
       <ReviewsSection />
-      <MotorpassSection />
+      <ContactCTASection />
     </div>
   )
 }
@@ -804,107 +804,64 @@ function ReviewsSection() {
 }
 
 /* ═══════════════════════════════════════════════
-   SECTION 8: MOTORPASS MEMBERSHIP
+   SECTION 8: CONTACT CTA
    ═══════════════════════════════════════════════ */
-function MotorpassSection() {
+function ContactCTASection() {
   const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
-  const leftRef = useScrollReveal<HTMLDivElement>({
-    y: 60, opacity: 0, duration: 1.0, ease: 'expo.out', start: 'top 80%',
-  })
-  const rightRef = useScrollReveal<HTMLDivElement>({
-    x: 40, opacity: 0, duration: 1.2, delay: 0.3, ease: 'expo.out', start: 'top 80%',
+  const ref = useScrollReveal<HTMLDivElement>({
+    y: 40, opacity: 0, duration: 1.0, ease: 'expo.out', start: 'top 80%',
   })
 
   return (
-    <section id="motorpass" style={{
+    <section style={{
       minHeight: 'auto', backgroundColor: '#111111', display: 'flex',
-      alignItems: 'center', padding: isMobile ? '60px 0' : '100px 0',
+      alignItems: 'center', padding: isMobile ? '60px 24px' : '100px 24px',
     }}>
-      <div className="motorpass-grid" style={{
-        maxWidth: '1440px', margin: '0 auto', padding: '0 24px',
-        display: 'grid', gap: '40px',
-        alignItems: 'center',
+      <div ref={ref} style={{
+        maxWidth: '800px', margin: '0 auto', textAlign: 'center',
       }}>
-        {/* Left — Text */}
-        <div ref={leftRef}>
-          <p style={{
-            fontFamily: 'JetBrains Mono, monospace', fontSize: '0.8rem',
-            letterSpacing: '0.2em', color: '#ffd700', textTransform: 'uppercase', marginBottom: '16px',
-          }}>
-            MEMBERSHIP
-          </p>
-          <h2 style={{
-            fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 700,
-            fontSize: 'clamp(1.5rem, 3vw, 2.5rem)', letterSpacing: '-1.5px',
-            textTransform: 'uppercase', lineHeight: 1, marginBottom: '20px',
-          }}>
-            <span style={{ color: '#f2f3f4' }}>JOIN THE / </span>
-            <span style={{ color: '#ffd700' }}>MOTORPASS.</span>
-          </h2>
-          <p style={{
-            fontFamily: 'Inter, system-ui, sans-serif', fontSize: '1rem',
-            lineHeight: 1.6, color: '#757575', maxWidth: '480px', marginBottom: '32px',
-          }}>
-            Get exclusive pricing, early access to new styles, free shipping on every order, and priority customer support. The ultimate advantage for enthusiasts.
-          </p>
-          <Link
-            to="/checkout"
-            style={{
-              display: 'inline-block', padding: '16px 32px', borderRadius: '9999px',
-              backgroundColor: '#ffd700', color: '#050401',
-              fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 700,
-              fontSize: '1rem', letterSpacing: '-0.72px', textTransform: 'uppercase',
-              textDecoration: 'none',
-              transition: 'transform 0.3s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.3s cubic-bezier(0.23, 1, 0.32, 1)',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateY(-2px)'
-              e.currentTarget.style.boxShadow = '0 0 40px rgba(255, 215, 0, 0.15)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateY(0)'
-              e.currentTarget.style.boxShadow = 'none'
-            }}
-          >
-            BECOME A MEMBER
-          </Link>
-          <div style={{ marginTop: '20px' }}>
-            <Link
-              to="/product"
-              style={{
-                fontFamily: 'Inter, system-ui, sans-serif', fontSize: '0.9rem',
-                color: '#757575', textDecoration: 'none',
-                borderBottom: '1px solid transparent',
-                transition: 'color 0.3s ease, border-color 0.3s ease',
-              }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#ffd700'; e.currentTarget.style.borderColor = '#ffd700' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#757575'; e.currentTarget.style.borderColor = 'transparent' }}
-            >
-              LEARN MORE
-            </Link>
-          </div>
-        </div>
-
-        {/* Right — Card Mockup */}
-        <div ref={rightRef} style={{
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        <p style={{
+          fontFamily: 'JetBrains Mono, monospace', fontSize: '0.8rem',
+          letterSpacing: '0.2em', color: '#ffd700', textTransform: 'uppercase', marginBottom: '16px',
         }}>
-          <div style={{
-            animation: 'float 4s ease-in-out infinite',
-            boxShadow: '0 0 80px rgba(255, 215, 0, 0.15)',
-            borderRadius: '16px',
-          }}>
-            <img
-              src="/motorpass-card-mockup.png"
-              alt="Motorpass Membership Card"
-              style={{
-                maxWidth: '100%', height: 'auto',
-                filter: 'drop-shadow(0 0 40px rgba(255, 215, 0, 0.2))',
-                borderRadius: '16px',
-              }}
-            />
-          </div>
-        </div>
+          GET IN TOUCH
+        </p>
+        <h2 style={{
+          fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 700,
+          fontSize: isMobile ? '1.75rem' : 'clamp(2rem, 3vw, 2.5rem)',
+          letterSpacing: '-1.5px', color: '#f2f3f4',
+          textTransform: 'uppercase', lineHeight: 1.1, marginBottom: '20px',
+        }}>
+          SAME DAY SERVICE AVAILABLE.
+        </h2>
+        <p style={{
+          fontFamily: 'Inter, system-ui, sans-serif', fontSize: '1rem',
+          lineHeight: 1.6, color: '#757575', maxWidth: '480px',
+          margin: '0 auto 32px',
+        }}>
+          Visit our store for same-day plate production. No appointment needed for standard plates. Professional fitting service available.
+        </p>
+        <Link
+          to="/contact"
+          style={{
+            display: 'inline-block', padding: '16px 32px', borderRadius: '9999px',
+            backgroundColor: '#ffd700', color: '#050401',
+            fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 700,
+            fontSize: '1rem', letterSpacing: '-0.72px', textTransform: 'uppercase',
+            textDecoration: 'none',
+            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'translateY(-2px)'
+            e.currentTarget.style.boxShadow = '0 0 40px rgba(255, 215, 0, 0.15)'
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.boxShadow = 'none'
+          }}
+        >
+          CONTACT US
+        </Link>
       </div>
     </section>
   )
