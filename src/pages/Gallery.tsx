@@ -53,26 +53,26 @@ interface GalleryItem {
 }
 
 const GALLERY_ITEMS: GalleryItem[] = [
-  { id: 1, image: '/plate-gallery-01.jpg', type: '4D GEL', vehicle: 'BMW M4', customer: 'James R.', likes: 124, aspect: '4/3' },
-  { id: 2, image: '/plate-gallery-02.jpg', type: '4D GEL', vehicle: 'Porsche 911', customer: 'Sophie L.', likes: 98, aspect: '3/4' },
-  { id: 3, image: '/plate-gallery-03.jpg', type: '3D', vehicle: 'Tesla Model 3', customer: 'Alex M.', likes: 156, aspect: '1/1' },
-  { id: 4, image: '/plate-gallery-04.jpg', type: 'SHOW PLATES', vehicle: 'Range Rover', customer: 'Daniel K.', likes: 87, aspect: '16/9' },
-  { id: 5, image: '/plate-gallery-05.jpg', type: 'CARBON', vehicle: 'Audi RS6', customer: 'Emma W.', likes: 203, aspect: '4/3' },
-  { id: 6, image: '/plate-gallery-06.jpg', type: '4D GEL', vehicle: 'Mercedes AMG', customer: 'Oliver H.', likes: 112, aspect: '3/4' },
-  { id: 7, image: '/plate-gallery-07.jpg', type: 'SIGNATURE', vehicle: 'Lamborghini', customer: 'Lucas P.', likes: 245, aspect: '4/3' },
-  { id: 8, image: '/plate-gallery-08.jpg', type: 'STICKER PLATES', vehicle: 'Ford Mustang', customer: 'Mia T.', likes: 76, aspect: '1/1' },
-  { id: 9, image: '/plate-gallery-01.jpg', type: '4D GEL', vehicle: 'BMW M3', customer: 'Ryan G.', likes: 134, aspect: '16/9' },
-  { id: 10, image: '/plate-gallery-03.jpg', type: '3D', vehicle: 'Tesla Model S', customer: 'Zoe B.', likes: 167, aspect: '3/4' },
-  { id: 11, image: '/plate-gallery-05.jpg', type: 'CARBON', vehicle: 'Audi R8', customer: 'Noah S.', likes: 189, aspect: '4/3' },
-  { id: 12, image: '/plate-gallery-07.jpg', type: 'SIGNATURE', vehicle: 'Porsche Cayman', customer: 'Lily J.', likes: 143, aspect: '1/1' },
+  { id: 1, image: '/pnp-07.jpg', type: '4D GEL', vehicle: 'BMW M4', customer: 'James R.', likes: 124, aspect: '4/3' },
+  { id: 2, image: '/pnp-05.jpg', type: '4D GEL', vehicle: 'Porsche 911', customer: 'Sophie L.', likes: 98, aspect: '3/4' },
+  { id: 3, image: '/pnp-06.jpg', type: '3D', vehicle: 'Tesla Model 3', customer: 'Alex M.', likes: 156, aspect: '1/1' },
+  { id: 4, image: '/pnp-03.jpg', type: 'SHOW PLATES', vehicle: 'Range Rover', customer: 'Daniel K.', likes: 87, aspect: '16/9' },
+  { id: 5, image: '/pnp-08.jpg', type: 'CARBON', vehicle: 'Audi RS6', customer: 'Emma W.', likes: 203, aspect: '4/3' },
+  { id: 6, image: '/pnp-09.jpg', type: '4D GEL', vehicle: 'Mercedes AMG', customer: 'Oliver H.', likes: 112, aspect: '3/4' },
+  { id: 7, image: '/pnp-10.jpg', type: 'SIGNATURE', vehicle: 'Lamborghini', customer: 'Lucas P.', likes: 245, aspect: '4/3' },
+  { id: 8, image: '/pnp-11.jpg', type: 'STICKER PLATES', vehicle: 'Ford Mustang', customer: 'Mia T.', likes: 76, aspect: '1/1' },
+  { id: 9, image: '/pnp-07.jpg', type: '4D GEL', vehicle: 'BMW M3', customer: 'Ryan G.', likes: 134, aspect: '16/9' },
+  { id: 10, image: '/pnp-06.jpg', type: '3D', vehicle: 'Tesla Model S', customer: 'Zoe B.', likes: 167, aspect: '3/4' },
+  { id: 11, image: '/pnp-08.jpg', type: 'CARBON', vehicle: 'Audi R8', customer: 'Noah S.', likes: 189, aspect: '4/3' },
+  { id: 12, image: '/pnp-10.jpg', type: 'SIGNATURE', vehicle: 'Porsche Cayman', customer: 'Lily J.', likes: 143, aspect: '1/1' },
 ]
 
 const HERO_IMAGES = [
-  '/plate-gallery-01.jpg',
-  '/plate-gallery-02.jpg',
-  '/plate-gallery-03.jpg',
-  '/plate-gallery-04.jpg',
-  '/plate-gallery-05.jpg',
+  '/pnp-07.jpg',
+  '/pnp-05.jpg',
+  '/pnp-06.jpg',
+  '/pnp-03.jpg',
+  '/pnp-08.jpg',
 ]
 
 const PLATE_TYPES = [
@@ -121,6 +121,7 @@ function Container({ children, style, className }: { children: React.ReactNode; 
 
 /* ─────────────────────── Section 1: Hero ─────────────────────── */
 function GalleryHero() {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
   const sectionRef = useRef<HTMLDivElement>(null)
   const imagesRef = useRef<(HTMLDivElement | null)[]>([])
   const textRef = useRef<HTMLDivElement>(null)
@@ -220,7 +221,9 @@ function GalleryHero() {
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'radial-gradient(circle at center, rgba(5,4,1,0.95) 0%, transparent 70%)',
+          background: isMobile
+            ? 'radial-gradient(circle at center, rgba(5,4,1,1) 0%, rgba(5,4,1,0.95) 50%, rgba(5,4,1,0.8) 100%)'
+            : 'radial-gradient(circle at center, rgba(5,4,1,0.95) 0%, transparent 70%)',
           zIndex: 5,
         }}
       />
@@ -241,11 +244,12 @@ function GalleryHero() {
           style={{
             fontFamily: "'Inter', system-ui, sans-serif",
             fontWeight: 700,
-            fontSize: 'clamp(2rem, 7vw, 6rem)',
-            letterSpacing: '-2.4px',
-            lineHeight: 0.9,
+            fontSize: isMobile ? '2.2rem' : 'clamp(2.5rem, 6vw, 6rem)',
+            letterSpacing: isMobile ? '-0.5px' : '-2.4px',
+            lineHeight: isMobile ? 1.0 : 0.9,
             color: TOKENS.textPrimary,
             textTransform: 'uppercase',
+            wordBreak: 'keep-all',
           }}
         >
           INSTALLED.
@@ -270,7 +274,7 @@ function GalleryHero() {
           style={{
             display: 'flex',
             justifyContent: 'center',
-            gap: '48px',
+            gap: isMobile ? '24px' : '48px',
             marginTop: '48px',
             flexWrap: 'wrap',
           }}
@@ -285,7 +289,7 @@ function GalleryHero() {
                 style={{
                   fontFamily: "'Inter', system-ui, sans-serif",
                   fontWeight: 700,
-                  fontSize: '2rem',
+                  fontSize: isMobile ? '1.5rem' : '2rem',
                   color: TOKENS.accentGold,
                   letterSpacing: '-1px',
                 }}

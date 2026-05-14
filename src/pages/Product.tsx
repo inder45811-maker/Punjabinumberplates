@@ -78,6 +78,14 @@ const reviews = [
    ═══════════════════════════════════════════ */
 export default function Product() {
   /* ─── state ─── */
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
+
   const [activeImage, setActiveImage] = useState(0)
   const [regInput, setRegInput] = useState('')
   const [plateConfig, setPlateConfig] = useState<'front_rear' | 'front_only' | 'rear_only'>('front_rear')
@@ -903,10 +911,10 @@ export default function Product() {
       </section>
 
       {/* ═══════ Section 2: Product Details Tabs ═══════ */}
-      <section ref={detailsRef} style={{ padding: '80px 0', backgroundColor: c.bgSurface }}>
+      <section ref={detailsRef} style={{ padding: isMobile ? '40px 0' : '80px 0', backgroundColor: c.bgSurface }}>
         <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '0 24px' }}>
           {/* Tab Navigation */}
-          <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', borderBottom: `1px solid ${c.borderSubtle}`, marginBottom: '48px' }}>
+          <div style={{ position: 'relative', display: 'flex', justifyContent: 'center', borderBottom: `1px solid ${c.borderSubtle}`, marginBottom: '48px', overflowX: 'auto' }}>
             {([
               { key: 'info' as const, label: 'PRODUCT INFORMATION' },
               { key: 'specs' as const, label: 'SPECIFICATIONS' },
@@ -916,14 +924,14 @@ export default function Product() {
                 key={tab.key}
                 onClick={() => handleTabChange(tab.key, i)}
                 style={{
-                  padding: '16px 32px',
+                  padding: isMobile ? '12px 16px' : '16px 32px',
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
                   fontFamily: 'Inter, system-ui, sans-serif',
                   fontWeight: 700,
-                  fontSize: '0.875rem',
-                  letterSpacing: '0.15em',
+                  fontSize: isMobile ? '0.7rem' : '0.875rem',
+                  letterSpacing: isMobile ? '0.08em' : '0.15em',
                   textTransform: 'uppercase',
                   color: activeTab === tab.key ? c.accentGold : c.textMuted,
                   borderBottom: activeTab === tab.key ? `1px solid ${c.accentGold}` : '1px solid transparent',
@@ -941,7 +949,7 @@ export default function Product() {
             {activeTab === 'info' && (
               <div style={{ animation: 'fade-in 0.3s ease forwards' }}>
                 <p style={{ color: c.textMuted, lineHeight: 1.8, marginBottom: '16px' }}>
-                  Upgrade your vehicle with APEX PLATES Premium Plates.
+                  Upgrade your vehicle with Punjabi Number Plates Premium Plates.
                 </p>
                 <p style={{ color: c.textMuted, lineHeight: 1.8, marginBottom: '16px' }}>
                   This listing is for a <strong style={{ color: c.textPrimary }}>4D 5mm</strong> number plate from Punjabi Number Plates, available as either a fully compliant <strong style={{ color: c.textPrimary }}>Road Legal plate</strong> or a <strong style={{ color: c.textPrimary }}>4D 5mm Show Plate</strong> for display use.
@@ -1011,7 +1019,7 @@ export default function Product() {
                     </div>
                   ))}
                 </div>
-                <p style={{ color: c.textMuted, textAlign: 'center', lineHeight: 1.8 }}>
+                <p style={{ color: c.textMuted, textAlign: 'center', lineHeight: 1.6, fontSize: isMobile ? '0.85rem' : '1rem', padding: '0 16px' }}>
                   30-day return policy on all unused plates. Road legal plates cannot be returned once registration documents have been submitted.
                 </p>
               </div>
