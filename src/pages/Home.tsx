@@ -62,49 +62,26 @@ export default function Home() {
    SECTION 2: HERO
    ═══════════════════════════════════════════════ */
 function HeroSection() {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
   const sectionRef = useRef<HTMLElement>(null)
   const textRef = useRef<HTMLDivElement>(null)
-  const imgLeftRef = useRef<HTMLImageElement>(null)
-  const imgRightRef = useRef<HTMLImageElement>(null)
-  const overlayRef = useRef<HTMLDivElement>(null)
+  const imgRef = useRef<HTMLImageElement>(null)
 
   useEffect(() => {
     const section = sectionRef.current
     const text = textRef.current
-    const imgLeft = imgLeftRef.current
-    const imgRight = imgRightRef.current
-    const overlay = overlayRef.current
-    if (!section || !text || !imgLeft || !imgRight || !overlay) return
+    const img = imgRef.current
+    if (!section || !text || !img) return
 
     const ctx = gsap.context(() => {
       gsap.from(text.children, {
-        y: 60,
+        y: 40,
         opacity: 0,
-        duration: 1.2,
-        stagger: 0.05,
+        duration: 1.0,
+        stagger: 0.08,
         ease: 'expo.out',
-        delay: 3.5,
+        delay: 0.5,
       })
-
-      const tl = gsap.timeline({
-        scrollTrigger: {
-          trigger: section,
-          start: 'top top',
-          end: '+=200%',
-          pin: true,
-          scrub: 1,
-        },
-      })
-
-      tl.fromTo(overlay, { opacity: 1 }, { opacity: 0, duration: 0.3 }, 0)
-      tl.fromTo([imgLeft, imgRight], { opacity: 0.3 }, { opacity: 0.8, duration: 0.3 }, 0)
-      tl.to(imgLeft, { x: '-100%', duration: 0.4 }, 0.3)
-      tl.to(imgRight, { x: '100%', duration: 0.4 }, 0.3)
-
-      const line1 = text.querySelector('.hero-line-1')
-      const line2 = text.querySelector('.hero-line-2')
-      if (line1) tl.to(line1, { y: '-100%', opacity: 0, duration: 0.3 }, 0.7)
-      if (line2) tl.to(line2, { y: '100%', opacity: 0, duration: 0.3 }, 0.7)
     }, section)
 
     return () => ctx.revert()
@@ -116,71 +93,57 @@ function HeroSection() {
       style={{
         position: 'relative',
         width: '100%',
-        height: '100vh',
+        minHeight: isMobile ? '85vh' : '100vh',
         overflow: 'hidden',
         backgroundColor: '#050401',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
     >
-      <img
-        ref={imgLeftRef}
-        src="/pnp-07.jpg"
-        alt=""
-        style={{
+      {/* Single background image with gradient overlay */}
+      <div style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        zIndex: 1,
+      }}>
+        <img
+          ref={imgRef}
+          src="/pnp-07.jpg"
+          alt=""
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            opacity: 0.6,
+          }}
+        />
+        <div style={{
           position: 'absolute',
           top: 0,
           left: 0,
           width: '100%',
           height: '100%',
-          objectFit: 'cover',
-          opacity: 0.3,
-          willChange: 'transform, opacity',
-        }}
-      />
-      <img
-        ref={imgRightRef}
-        src="/pnp-05.jpg"
-        alt=""
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          opacity: 0.3,
-          mixBlendMode: 'lighten',
-          willChange: 'transform, opacity',
-        }}
-      />
+          background: 'linear-gradient(to bottom, rgba(5,4,1,0.7) 0%, rgba(5,4,1,0.4) 40%, rgba(5,4,1,0.8) 100%)',
+        }} />
+      </div>
 
-      <div
-        ref={overlayRef}
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
-          backgroundColor: '#050401',
-          opacity: 1,
-          zIndex: 2,
-        }}
-      />
-
+      {/* Content */}
       <div
         ref={textRef}
         style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '100%',
+          position: 'relative',
+          zIndex: 10,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          zIndex: 10,
-          padding: '0 24px',
+          padding: isMobile ? '120px 20px 40px' : '100px 24px',
+          textAlign: 'center',
+          maxWidth: '800px',
         }}
       >
         <h1
@@ -188,12 +151,14 @@ function HeroSection() {
           style={{
             fontFamily: 'Inter, system-ui, sans-serif',
             fontWeight: 700,
-            fontSize: 'clamp(3rem, 8vw, 8rem)',
-            letterSpacing: '-2.4px',
+            fontSize: isMobile ? '2.5rem' : 'clamp(3.5rem, 7vw, 7rem)',
+            letterSpacing: isMobile ? '-1px' : '-2.4px',
             color: '#f2f3f4',
             textTransform: 'uppercase',
-            lineHeight: 0.85,
+            lineHeight: 1.0,
             textAlign: 'center',
+            marginBottom: '4px',
+            wordBreak: 'keep-all',
           }}
         >
           YOUR REG,
@@ -203,32 +168,47 @@ function HeroSection() {
           style={{
             fontFamily: 'Inter, system-ui, sans-serif',
             fontWeight: 700,
-            fontSize: 'clamp(3rem, 8vw, 8rem)',
-            letterSpacing: '-2.4px',
+            fontSize: isMobile ? '2.5rem' : 'clamp(3.5rem, 7vw, 7rem)',
+            letterSpacing: isMobile ? '-1px' : '-2.4px',
             color: '#ffd700',
             textTransform: 'uppercase',
-            lineHeight: 0.85,
+            lineHeight: 1.0,
             textAlign: 'center',
+            marginBottom: '24px',
+            wordBreak: 'keep-all',
           }}
         >
           YOUR RULE.
         </h1>
+        <p
+          style={{
+            fontFamily: 'Inter, system-ui, sans-serif',
+            fontSize: isMobile ? '0.9rem' : '1.1rem',
+            color: '#a0a0a0',
+            maxWidth: '480px',
+            textAlign: 'center',
+            lineHeight: 1.5,
+            marginBottom: '24px',
+          }}
+        >
+          Handcrafted number plates. Same day service. Road legal, show plates, and everything in between.
+        </p>
         <Link
           to="/product"
           style={{
-            marginTop: '32px',
-            padding: '16px 32px',
+            padding: isMobile ? '14px 28px' : '16px 36px',
             borderRadius: '9999px',
             backgroundColor: '#ffd700',
             color: '#050401',
             fontFamily: 'Inter, system-ui, sans-serif',
             fontWeight: 700,
-            fontSize: '1rem',
-            letterSpacing: '-0.72px',
+            fontSize: isMobile ? '0.85rem' : '1rem',
+            letterSpacing: '-0.5px',
             textTransform: 'uppercase',
             textDecoration: 'none',
-            transition: 'transform 0.3s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.3s cubic-bezier(0.23, 1, 0.32, 1)',
+            transition: 'transform 0.3s ease, box-shadow 0.3s ease',
             display: 'inline-block',
+            whiteSpace: 'nowrap',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.transform = 'translateY(-2px)'
@@ -241,19 +221,6 @@ function HeroSection() {
         >
           BROWSE COLLECTION
         </Link>
-        <p
-          style={{
-            marginTop: '24px',
-            fontFamily: 'Inter, system-ui, sans-serif',
-            fontSize: '1rem',
-            color: '#757575',
-            maxWidth: '480px',
-            textAlign: 'center',
-            lineHeight: 1.6,
-          }}
-        >
-          Handcrafted number plates. Same day service. Road legal, show plates, and everything in between.
-        </p>
       </div>
     </section>
   )
@@ -263,6 +230,7 @@ function HeroSection() {
    SECTION 3: TRUSTED BY THOUSANDS
    ═══════════════════════════════════════════════ */
 function TrustedBySection() {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
   const statsRef = useScrollReveal<HTMLDivElement>({
     y: 40, opacity: 0, duration: 1.0, ease: 'expo.out', start: 'top 85%', children: true, stagger: 0.2,
   })
@@ -271,7 +239,7 @@ function TrustedBySection() {
   })
 
   return (
-    <section style={{ padding: '100px 0', backgroundColor: '#050401' }}>
+    <section style={{ padding: isMobile ? '60px 0' : '100px 0', backgroundColor: '#050401' }}>
       <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '0 24px' }}>
         <div ref={headerRef} style={{ textAlign: 'center', marginBottom: '48px' }}>
           <p style={{
@@ -327,6 +295,7 @@ function TrustedBySection() {
    SECTION 4: THE COLLECTION
    ═══════════════════════════════════════════════ */
 function CollectionSection() {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
   const leftRef = useScrollReveal<HTMLDivElement>({
     x: -40, y: 0, opacity: 0, duration: 1.0, ease: 'expo.out', start: 'top 80%',
   })
@@ -335,10 +304,10 @@ function CollectionSection() {
   })
 
   return (
-    <section style={{ padding: '120px 0', backgroundColor: '#050401' }}>
+    <section style={{ padding: isMobile ? '60px 0' : '120px 0', backgroundColor: '#050401' }}>
       <div className="collection-grid" style={{
         maxWidth: '1440px', margin: '0 auto', padding: '0 24px',
-        display: 'grid', gridTemplateColumns: '55% 45%', gap: '24px', alignItems: 'start',
+        display: 'grid', gap: '24px', alignItems: 'start',
       }}>
         {/* Left: Featured Image */}
         <div ref={leftRef}>
@@ -472,6 +441,7 @@ function ProductCard({ product }: { product: { name: string; price: string; img:
    SECTION 5: CRAFT & PRECISION
    ═══════════════════════════════════════════════ */
 function CraftSection() {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
   const sectionRef = useRef<HTMLElement>(null)
   const textRef = useRef<HTMLDivElement>(null)
 
@@ -481,33 +451,35 @@ function CraftSection() {
     if (!section || !text) return
 
     const ctx = gsap.context(() => {
-      gsap.timeline({
-        scrollTrigger: {
-          trigger: section,
-          start: 'top top',
-          end: '+=150%',
-          pin: true,
-          scrub: 1,
-        },
-      })
+      if (!isMobile) {
+        gsap.timeline({
+          scrollTrigger: {
+            trigger: section,
+            start: 'top top',
+            end: '+=150%',
+            pin: true,
+            scrub: 1,
+          },
+        })
+      }
 
       const textEl = text.querySelectorAll('.craft-text')
       gsap.from(textEl, {
-        y: 60,
+        y: 40,
         opacity: 0,
-        duration: 1.0,
+        duration: 0.8,
         stagger: 0.1,
         ease: 'expo.out',
         scrollTrigger: {
           trigger: section,
-          start: 'top 60%',
+          start: 'top 70%',
           toggleActions: 'play none none none',
         },
       })
     }, section)
 
     return () => ctx.revert()
-  }, [])
+  }, [isMobile])
 
   return (
     <section
@@ -515,9 +487,12 @@ function CraftSection() {
       style={{
         position: 'relative',
         width: '100%',
-        height: '100vh',
+        minHeight: isMobile ? '60vh' : '100vh',
         overflow: 'hidden',
         backgroundColor: '#050401',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
       }}
     >
       {/* Background Images */}
@@ -556,15 +531,16 @@ function CraftSection() {
           alignItems: 'center',
           justifyContent: 'center',
           height: '100%',
-          padding: '0 24px',
+          padding: isMobile ? '60px 20px' : '0 24px',
           textAlign: 'center',
         }}
       >
         <h2 className="craft-text" style={{
           fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 700,
-          fontSize: 'clamp(2rem, 6vw, 5rem)', letterSpacing: '-1.5px',
-          color: '#f2f3f4', textTransform: 'uppercase', lineHeight: 1,
-          marginBottom: '24px',
+          fontSize: isMobile ? '1.75rem' : 'clamp(2.5rem, 5vw, 4rem)',
+          letterSpacing: isMobile ? '-0.5px' : '-1.5px',
+          color: '#f2f3f4', textTransform: 'uppercase', lineHeight: 1.1,
+          marginBottom: '16px', padding: '0 16px',
         }}>
           CRAFTED FOR THE DETAIL.
         </h2>
@@ -599,6 +575,7 @@ function CraftSection() {
    SECTION 6: GALLERY PREVIEW
    ═══════════════════════════════════════════════ */
 function GalleryPreviewSection() {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
   const gridRef = useScrollReveal<HTMLDivElement>({
     y: 50, opacity: 0, duration: 1.0, ease: 'expo.out', start: 'top 85%', children: true, stagger: 0.08,
   })
@@ -607,10 +584,10 @@ function GalleryPreviewSection() {
   })
 
   return (
-    <section style={{ padding: '120px 0', backgroundColor: '#111111' }}>
+    <section style={{ padding: isMobile ? '60px 0' : '100px 0', backgroundColor: '#111111' }}>
       <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '0 24px' }}>
         <div ref={headerRef} style={{
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '48px',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '32px',
         }}>
           <h2 style={{
             fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 700,
@@ -639,7 +616,7 @@ function GalleryPreviewSection() {
         </div>
 
         <div ref={gridRef} className="gallery-grid" style={{
-          display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '16px',
+          display: 'grid', gap: '16px',
         }}>
           {galleryImages.map((img, i) => (
             <div
@@ -699,6 +676,7 @@ function GalleryPreviewSection() {
    SECTION 7: GOOGLE REVIEWS
    ═══════════════════════════════════════════════ */
 function ReviewsSection() {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
   const headerRef = useScrollReveal<HTMLDivElement>({
     y: 30, opacity: 0, duration: 0.8, ease: 'expo.out', start: 'top 85%',
   })
@@ -708,7 +686,7 @@ function ReviewsSection() {
   })
 
   return (
-    <section style={{ padding: '100px 0', backgroundColor: '#050401' }}>
+    <section style={{ padding: isMobile ? '60px 0' : '100px 0', backgroundColor: '#050401' }}>
       <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '0 24px' }}>
         {/* Header */}
         <div ref={headerRef} style={{ textAlign: 'center', marginBottom: '48px' }}>
@@ -829,6 +807,7 @@ function ReviewsSection() {
    SECTION 8: MOTORPASS MEMBERSHIP
    ═══════════════════════════════════════════════ */
 function MotorpassSection() {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
   const leftRef = useScrollReveal<HTMLDivElement>({
     y: 60, opacity: 0, duration: 1.0, ease: 'expo.out', start: 'top 80%',
   })
@@ -838,14 +817,14 @@ function MotorpassSection() {
 
   return (
     <section id="motorpass" style={{
-      minHeight: '100vh', backgroundColor: '#111111', display: 'flex',
-      alignItems: 'center', padding: '120px 0',
+      minHeight: 'auto', backgroundColor: '#111111', display: 'flex',
+      alignItems: 'center', padding: isMobile ? '60px 0' : '100px 0',
     }}>
-      <div style={{
+      <div className="motorpass-grid" style={{
         maxWidth: '1440px', margin: '0 auto', padding: '0 24px',
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '80px',
+        display: 'grid', gap: '40px',
         alignItems: 'center',
-      }} className="motorpass-grid">
+      }}>
         {/* Left — Text */}
         <div ref={leftRef}>
           <p style={{

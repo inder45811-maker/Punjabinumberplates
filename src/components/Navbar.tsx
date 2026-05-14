@@ -14,6 +14,14 @@ const navLinks = [
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10)
@@ -58,15 +66,16 @@ export default function Navbar() {
               textDecoration: 'none',
             }}
           >
-            <img src="/logo.png" alt="PNP" style={{ width: '36px', height: '36px', borderRadius: '50%' }} />
+            <img src="/logo.png" alt="PNP" style={{ width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', borderRadius: '50%', flexShrink: 0 }} />
             <span
               style={{
                 fontFamily: 'Inter, system-ui, sans-serif',
                 fontWeight: 700,
-                fontSize: '1.25rem',
-                letterSpacing: '-2.4px',
+                fontSize: isMobile ? '0.85rem' : '1.1rem',
+                letterSpacing: isMobile ? '0.5px' : '-0.5px',
                 color: '#f2f3f4',
                 textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
               }}
             >
               PUNJABI NUMBER PLATES

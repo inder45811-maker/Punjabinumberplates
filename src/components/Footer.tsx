@@ -22,8 +22,10 @@ const companyLinks = [
 ]
 
 export default function Footer() {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+
   return (
-    <footer style={{ backgroundColor: '#111111', padding: '120px 0 60px' }}>
+    <footer style={{ backgroundColor: '#111111', padding: isMobile ? '60px 0 40px' : '100px 0 60px' }}>
       <div
         style={{
           maxWidth: '1440px',
@@ -33,25 +35,25 @@ export default function Footer() {
       >
         {/* 4-Column Grid */}
         <div
+          className="footer-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
             gap: '24px',
           }}
-          className="footer-grid"
         >
           {/* Col 1: Logo + tagline */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-              <img src="/logo.png" alt="PNP" style={{ width: '36px', height: '36px', borderRadius: '50%' }} />
+              <img src="/logo.png" alt="PNP" style={{ width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', borderRadius: '50%', flexShrink: 0 }} />
               <span
                 style={{
                   fontFamily: 'Inter, system-ui, sans-serif',
                   fontWeight: 700,
-                  fontSize: '1.25rem',
-                  letterSpacing: '-2.4px',
+                  fontSize: isMobile ? '0.9rem' : '1.1rem',
+                  letterSpacing: isMobile ? '0.5px' : '-0.5px',
                   color: '#f2f3f4',
                   textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
                 }}
               >
                 PUNJABI NUMBER PLATES
