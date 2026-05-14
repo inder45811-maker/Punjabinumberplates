@@ -646,8 +646,8 @@ function ContactFormAndStore() {
               lineHeight: 1.7,
             }}
           >
-            <div>APEX PLATES</div>
-            <div>Unit 7, Apex Industrial Estate</div>
+            <div>PUNJABI NUMBER PLATES</div>
+            <div>Unit 7, PNP Industrial Estate</div>
             <div>47-49 Northern Road</div>
             <div>London, N7 9BG</div>
           </div>
@@ -727,7 +727,7 @@ function ContactFormAndStore() {
           {/* Contact Details */}
           <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <a
-              href="mailto:hello@apexplates.co.uk"
+              href="mailto:hello@punjabinumberplates.co.uk"
               style={{
                 fontFamily: "'Inter', system-ui, sans-serif",
                 fontSize: '0.9rem',
@@ -742,7 +742,7 @@ function ContactFormAndStore() {
                 e.currentTarget.style.color = TOKENS.textPrimary
               }}
             >
-              &#9993; hello@apexplates.co.uk
+              &#9993; hello@punjabinumberplates.co.uk
             </a>
             <a
               href="tel:02079460958"
@@ -1174,7 +1174,7 @@ function CTABanner() {
             lineHeight: 1.6,
           }}
         >
-          APEX PLATES, Unit 7, Apex Industrial Estate, 47-49 Northern Road,
+          PUNJABI NUMBER PLATES, Unit 7, PNP Industrial Estate, 47-49 Northern Road,
           London N7 9BG
         </p>
         <div

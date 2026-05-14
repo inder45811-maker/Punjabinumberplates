@@ -1150,7 +1150,7 @@ function ContactCTA() {
             }}
           >
             <a
-              href="mailto:compliance@apexplates.co.uk"
+              href="mailto:compliance@punjabinumberplates.co.uk"
               style={{
                 display: 'flex',
                 alignItems: 'center',
@@ -1168,7 +1168,7 @@ function ContactCTA() {
                 e.currentTarget.style.color = TOKENS.textMuted
               }}
             >
-              <Mail size={14} /> compliance@apexplates.co.uk
+              <Mail size={14} /> compliance@punjabinumberplates.co.uk
             </a>
             <a
               href="tel:02079460958"

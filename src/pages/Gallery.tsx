@@ -896,7 +896,7 @@ function SubmitSection() {
               marginTop: '20px',
             }}
           >
-            Had your APEX plate installed? Share it with the community. The best
+            Had your PNP plate installed? Share it with the community. The best
             submissions get featured on our homepage and social channels.
           </p>
           <p

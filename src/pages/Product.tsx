@@ -863,7 +863,7 @@ export default function Product() {
             <div style={{ marginTop: '16px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
               <MapPin size={16} color={c.textMuted} style={{ flexShrink: 0, marginTop: '3px' }} />
               <p style={{ fontSize: '0.875rem', color: c.textMuted }}>
-                Click &amp; Collect available at APEX PLATES, London. Usually ready in 24 hours.{" "}
+                Click &amp; Collect available at Punjabi Number Plates, London. Usually ready in 24 hours.{" "}
                 <Link to="/contact" style={{ color: c.accentGold, textDecoration: 'none' }}>
                   View store information
                 </Link>
