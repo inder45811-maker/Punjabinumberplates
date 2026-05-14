@@ -1,12 +1,10 @@
-import { useEffect, useRef, useState, lazy, Suspense } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router'
 import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Star, ArrowRight } from 'lucide-react'
 import Marquee from 'react-fast-marquee'
 import { useScrollReveal } from '../hooks/useScrollReveal'
-
-const WebGLIntro = lazy(() => import('../components/WebGLIntro'))
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -23,36 +21,32 @@ const reviews = [
 ]
 
 const products = [
-  { name: '4D 5MM GEL BLACK', price: '\u00a324.99', img: '/plate-4d-gel-black-01.jpg' },
-  { name: '4D GEL PLATE PAIR', price: '\u00a344.99', img: '/plate-4d-gel-black-02.jpg' },
-  { name: '3D GEL DOMED SET', price: '\u00a339.99', img: '/plate-4d-gel-black-03.jpg' },
-  { name: '4D LASER CUT SHOW', price: '\u00a329.99', img: '/plate-4d-gel-black-04.jpg' },
+  { name: '4D 5MM ROAD LEGAL PLATES', price: '\u00a345.00', img: '/pnp-07.jpg' },
+  { name: '4D GEL ROAD LEGAL PLATES', price: '\u00a355.00', img: '/pnp-05.jpg' },
+  { name: 'GHOST ROAD LEGAL PLATES', price: '\u00a370.00', img: '/pnp-06.jpg' },
+  { name: 'STANDARD NUMBER PLATES', price: '\u00a325.00', img: '/pnp-01.jpg' },
 ]
 
 const galleryImages = [
-  { src: '/plate-gallery-01.jpg', label: 'BMW M4 COMPETITION' },
-  { src: '/plate-gallery-02.jpg', label: 'PORSCHE 911 CARRERA' },
-  { src: '/plate-gallery-03.jpg', label: 'MERCEDES-AMG C63' },
-  { src: '/plate-gallery-04.jpg', label: 'TESLA MODEL S' },
-  { src: '/plate-gallery-05.jpg', label: 'AUDI RS6 AVANT' },
-  { src: '/plate-gallery-06.jpg', label: 'BMW M3 CS' },
-  { src: '/plate-gallery-07.jpg', label: 'PORSCHE 718 GT4' },
-  { src: '/plate-gallery-08.jpg', label: 'RANGE ROVER SPORT' },
+  { src: '/pnp-07.jpg', label: '4D 5MM GEL BLACK' },
+  { src: '/pnp-05.jpg', label: '4D GEL ROAD LEGAL' },
+  { src: '/pnp-06.jpg', label: 'GHOST PLATES' },
+  { src: '/pnp-03.jpg', label: '3D GEL DOMED' },
+  { src: '/pnp-08.jpg', label: 'CUSTOM INSTALL' },
+  { src: '/pnp-09.jpg', label: 'PREMIUM FINISH' },
+  { src: '/pnp-10.jpg', label: '4D LASER CUT' },
+  { src: '/pnp-11.jpg', label: 'SHOW PLATES' },
 ]
 
 const stats = [
-  { number: '10,000+', label: 'PLATES SOLD' },
-  { number: '1,081', label: 'GOOGLE REVIEWS' },
-  { number: '4.8', label: 'AVERAGE RATING' },
-  { number: '24H', label: 'DISPATCH TIME' },
+  { number: '500+', label: 'INSTALLATIONS' },
+  { number: '50+', label: 'VEHICLE BRANDS' },
+  { number: '5\u2605', label: 'AVERAGE RATING' },
 ]
 
 export default function Home() {
   return (
     <div style={{ backgroundColor: '#050401' }}>
-      <Suspense fallback={null}>
-        <WebGLIntro />
-      </Suspense>
       <HeroSection />
       <TrustedBySection />
       <CollectionSection />
@@ -129,7 +123,7 @@ function HeroSection() {
     >
       <img
         ref={imgLeftRef}
-        src="/hero-numberplate-closeup.jpg"
+        src="/pnp-07.jpg"
         alt=""
         style={{
           position: 'absolute',
@@ -144,7 +138,7 @@ function HeroSection() {
       />
       <img
         ref={imgRightRef}
-        src="/hero-customer-plates.jpg"
+        src="/pnp-05.jpg"
         alt=""
         style={{
           position: 'absolute',
@@ -258,7 +252,7 @@ function HeroSection() {
             lineHeight: 1.6,
           }}
         >
-          Handcrafted number plates. Engineered for distinction. Road legal, show, and everything in between.
+          Handcrafted number plates. Same day service. Road legal, show plates, and everything in between.
         </p>
       </div>
     </section>
@@ -290,8 +284,8 @@ function TrustedBySection() {
 
         <Marquee speed={40} gradient={false}>
           {[
-            '1081 GOOGLE REVIEWS', 'DVLA APPROVED', 'NEXT-DAY DELIVERY', 'PREMIUM MATERIALS',
-            '1081 GOOGLE REVIEWS', 'DVLA APPROVED', 'NEXT-DAY DELIVERY', 'PREMIUM MATERIALS',
+            'SAME DAY SERVICE', 'DVLA APPROVED SUPPLIERS', 'NEXT-DAY DELIVERY', 'PREMIUM MATERIALS',
+            'SAME DAY SERVICE', 'DVLA APPROVED SUPPLIERS', 'NEXT-DAY DELIVERY', 'PREMIUM MATERIALS',
           ].map((item, i) => (
             <span key={i} style={{
               fontFamily: 'JetBrains Mono, monospace', fontSize: '1rem', color: '#757575',
@@ -304,7 +298,7 @@ function TrustedBySection() {
         </Marquee>
 
         <div ref={statsRef} className="stats-grid" style={{
-          display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '24px', marginTop: '80px',
+          display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '24px', marginTop: '80px',
         }}>
           {stats.map((stat) => (
             <div key={stat.label} style={{ textAlign: 'center' }}>
@@ -372,8 +366,8 @@ function CollectionSection() {
             }}
           >
             <img
-              src="/plate-4d-gel-black-01.jpg"
-              alt="4D 5mm Gel Black Plate"
+              src="/pnp-07.jpg"
+              alt="4D 5mm Road Legal Plate"
               style={{
                 width: '100%', height: '100%', objectFit: 'cover',
                 transition: 'transform 0.6s cubic-bezier(0.23, 1, 0.32, 1)',
@@ -527,7 +521,7 @@ function CraftSection() {
       }}
     >
       {/* Background Images */}
-      {['/plate-gallery-01.jpg', '/plate-gallery-02.jpg', '/plate-gallery-03.jpg', '/plate-gallery-04.jpg'].map((src, i) => (
+      {['/pnp-07.jpg', '/pnp-05.jpg', '/pnp-06.jpg', '/pnp-03.jpg'].map((src, i) => (
         <img
           key={src}
           src={src}

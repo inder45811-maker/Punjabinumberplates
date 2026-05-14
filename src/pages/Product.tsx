@@ -40,30 +40,30 @@ const easeSmooth = 'cubic-bezier(0.23, 1, 0.32, 1)'
 
 /* ─── gallery images ─── */
 const galleryImages = [
-  '/plate-4d-gel-black-01.jpg',
-  '/plate-4d-gel-black-02.jpg',
-  '/plate-4d-gel-black-03.jpg',
-  '/plate-4d-gel-black-04.jpg',
-  '/hero-numberplate-closeup.jpg',
-  '/hero-customer-plates.jpg',
+  '/pnp-07.jpg',
+  '/pnp-05.jpg',
+  '/pnp-06.jpg',
+  '/pnp-03.jpg',
+  '/pnp-08.jpg',
+  '/pnp-09.jpg',
 ]
 
 /* ─── related products data ─── */
 const relatedProducts = [
-  { id: 1, name: 'SIGNATURE SURROUNDS', price: '£19.99', desc: 'Number plate frames in matte black, carbon, and chrome finishes.', image: '/plate-4d-gel-black-01.jpg' },
-  { id: 2, name: 'ANTI-THEFT SCREWS', price: '£9.99', desc: 'Tamper-proof fixings with security caps.', image: '/plate-4d-gel-black-02.jpg' },
-  { id: 3, name: 'PLATE CLEANER KIT', price: '£14.99', desc: 'Premium detailing kit for maintaining gel finish.', image: '/plate-4d-gel-black-03.jpg' },
-  { id: 4, name: 'STYKER SHIELD', price: '£24.99', desc: 'Clear protective film for 4D gel characters.', image: '/plate-4d-gel-black-04.jpg' },
+  { id: 1, name: '4D GEL ROAD LEGAL PLATES', price: '£55.00', desc: 'Premium 4D gel plates with gloss black finish. DVLA compliant.', image: '/pnp-05.jpg' },
+  { id: 2, name: 'GHOST ROAD LEGAL PLATES', price: '£70.00', desc: 'Stealth ghost plates with subtle 4D characters.', image: '/pnp-06.jpg' },
+  { id: 3, name: '3D GEL DOMED PLATES', price: '£35.00', desc: 'Classic 3D gel domed plates with resin finish.', image: '/pnp-03.jpg' },
+  { id: 4, name: 'STANDARD NUMBER PLATES', price: '£25.00', desc: 'High-quality standard plates. Road legal and DVLA compliant.', image: '/pnp-01.jpg' },
 ]
 
 /* ─── gallery images for teaser ─── */
 const galleryTeaserImages = [
-  { src: '/plate-gallery-01.jpg', label: 'BMW M3', aspect: '4/3' },
-  { src: '/plate-gallery-02.jpg', label: 'Porsche 911', aspect: '3/4' },
-  { src: '/plate-gallery-03.jpg', label: 'Tesla Model S', aspect: '4/3' },
-  { src: '/plate-gallery-04.jpg', label: 'Mercedes AMG', aspect: '3/4' },
-  { src: '/plate-gallery-05.jpg', label: 'Audi RS6', aspect: '4/3' },
-  { src: '/plate-gallery-06.jpg', label: 'Range Rover', aspect: '3/4' },
+  { src: '/pnp-07.jpg', label: '4D 5MM GEL', aspect: '4/3' },
+  { src: '/pnp-05.jpg', label: '4D GEL PLATE', aspect: '3/4' },
+  { src: '/pnp-06.jpg', label: 'GHOST PLATE', aspect: '4/3' },
+  { src: '/pnp-03.jpg', label: '3D GEL DOMED', aspect: '3/4' },
+  { src: '/pnp-08.jpg', label: 'CUSTOM INSTALL', aspect: '4/3' },
+  { src: '/pnp-09.jpg', label: 'PREMIUM FINISH', aspect: '3/4' },
 ]
 
 /* ─── reviews data ─── */
@@ -88,8 +88,8 @@ export default function Product() {
   const [activeTab, setActiveTab] = useState<'info' | 'specs' | 'delivery'>('info')
 
   /* ─── computed price ─── */
-  const basePrice = 59.99
-  const configDiscount = plateConfig === 'front_rear' ? 0 : 25
+  const basePrice = 45.00
+  const configDiscount = plateConfig === 'front_rear' ? 0 : 20
   const totalPrice = (basePrice - configDiscount) * quantity
 
   /* ─── zoom state ─── */
@@ -259,7 +259,7 @@ export default function Product() {
               <img
                 key={activeImage}
                 src={galleryImages[activeImage]}
-                alt="4D 5mm Gel Black"
+                alt="4D 5mm Road Legal Plate"
                 style={{
                   width: '100%',
                   height: '100%',
@@ -329,7 +329,7 @@ export default function Product() {
                 marginBottom: '12px',
               }}
             >
-              4D 5MM GEL BLACK
+              4D 5MM ROAD LEGAL PLATES
             </h1>
 
             {/* Price */}
@@ -944,7 +944,7 @@ export default function Product() {
                   Upgrade your vehicle with APEX PLATES Premium Plates.
                 </p>
                 <p style={{ color: c.textMuted, lineHeight: 1.8, marginBottom: '16px' }}>
-                  This listing is for a <strong style={{ color: c.textPrimary }}>4D 5mm</strong> number plate, available as either a fully compliant <strong style={{ color: c.textPrimary }}>Road Legal plate</strong> or a <strong style={{ color: c.textPrimary }}>4D 5mm Show Plate</strong> for display use.
+                  This listing is for a <strong style={{ color: c.textPrimary }}>4D 5mm</strong> number plate from Punjabi Number Plates, available as either a fully compliant <strong style={{ color: c.textPrimary }}>Road Legal plate</strong> or a <strong style={{ color: c.textPrimary }}>4D 5mm Show Plate</strong> for display use.
                 </p>
                 <p style={{ color: c.textMuted, lineHeight: 1.8, marginBottom: '16px' }}>
                   Please ensure you select the correct plate type before ordering.
@@ -1583,7 +1583,7 @@ export default function Product() {
             className="cta-animate"
             style={{ color: c.textMuted, lineHeight: 1.6, marginBottom: '32px' }}
           >
-            Your registration deserves the APEX treatment. Order before 2PM for next-day dispatch.
+            Your registration deserves the PNP treatment. Same day service available.
           </p>
           <Link
             className="cta-animate"
@@ -1656,7 +1656,7 @@ export default function Product() {
           >
             <div>
               <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '0.75rem', color: c.accentGold, textTransform: 'uppercase', letterSpacing: '0.1em' }}>
-                4D 5MM GEL BLACK
+                4D 5MM ROAD LEGAL PLATES
               </p>
               <p style={{ fontFamily: "'JetBrains Mono', monospace", fontSize: '1.25rem', color: c.textPrimary }}>
                 &pound;{totalPrice.toFixed(2)}

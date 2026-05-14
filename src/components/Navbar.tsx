@@ -4,10 +4,10 @@ import { Search, User, ShoppingBag, Menu, X } from 'lucide-react'
 import Marquee from 'react-fast-marquee'
 
 const navLinks = [
+  { label: 'HOME', to: '/' },
   { label: 'SHOP', to: '/product' },
-  { label: 'MOTORPASS', to: '/#motorpass' },
   { label: 'GALLERY', to: '/gallery' },
-  { label: 'ABOUT', to: '/#about' },
+  { label: 'ABOUT', to: '/about' },
   { label: 'CONTACT', to: '/contact' },
 ]
 
@@ -54,13 +54,11 @@ export default function Navbar() {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '10px',
               textDecoration: 'none',
             }}
           >
-            <svg width="12" height="16" viewBox="0 0 12 16" fill="none">
-              <path d="M2 2L10 8L2 14" stroke="#ffd700" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <img src="/logo.png" alt="PNP" style={{ width: '36px', height: '36px', borderRadius: '50%' }} />
             <span
               style={{
                 fontFamily: 'Inter, system-ui, sans-serif',
@@ -71,7 +69,7 @@ export default function Navbar() {
                 textTransform: 'uppercase',
               }}
             >
-              APEX PLATES
+              PUNJABI NUMBER PLATES
             </span>
           </Link>
 
@@ -198,7 +196,7 @@ export default function Navbar() {
               paddingRight: '48px',
             }}
           >
-            DELIVERING PRECISION — ORDER BEFORE 2PM FOR NEXT-DAY DISPATCH — DELIVERING PRECISION — ORDER BEFORE 2PM FOR NEXT-DAY DISPATCH —
+            FOLLOW US ON INSTAGRAM @PUNJABINUMBERPLATES — IN-STORE PICKUP AVAILABLE — ALL PREMIUM CATEGORIES WITH HIGH DISCOUNTS — FOLLOW US ON INSTAGRAM @PUNJABINUMBERPLATES — IN-STORE PICKUP AVAILABLE — ALL PREMIUM CATEGORIES WITH HIGH DISCOUNTS —
           </span>
         </Marquee>
       </div>

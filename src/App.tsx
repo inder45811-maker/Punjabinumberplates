@@ -6,6 +6,7 @@ import Checkout from './pages/Checkout'
 import Gallery from './pages/Gallery'
 import Legal from './pages/Legal'
 import Contact from './pages/Contact'
+import About from './pages/About'
 
 export default function App() {
   return (
@@ -17,6 +18,7 @@ export default function App() {
         <Route path="/gallery" element={<Gallery />} />
         <Route path="/legal" element={<Legal />} />
         <Route path="/contact" element={<Contact />} />
+        <Route path="/about" element={<About />} />
       </Routes>
     </Layout>
   )

@@ -2,9 +2,10 @@ import { Link } from 'react-router'
 
 const shopLinks = [
   { label: 'Road Legal Plates', to: '/product' },
-  { label: 'Show Plates', to: '/product' },
-  { label: '4D Gel', to: '/product' },
-  { label: '3D Plates', to: '/product' },
+  { label: 'Showplates', to: '/product' },
+  { label: '4D Gel Plates', to: '/product' },
+  { label: 'Plate Holders', to: '/product' },
+  { label: 'Side Badges', to: '/product' },
 ]
 
 const infoLinks = [
@@ -15,8 +16,7 @@ const infoLinks = [
 ]
 
 const companyLinks = [
-  { label: 'About', to: '/#about' },
-  { label: 'Careers', to: '/contact' },
+  { label: 'About', to: '/about' },
   { label: 'Contact', to: '/contact' },
   { label: 'Privacy', to: '/legal' },
 ]
@@ -42,10 +42,8 @@ export default function Footer() {
         >
           {/* Col 1: Logo + tagline */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '16px' }}>
-              <svg width="12" height="16" viewBox="0 0 12 16" fill="none">
-                <path d="M2 2L10 8L2 14" stroke="#ffd700" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <img src="/logo.png" alt="PNP" style={{ width: '36px', height: '36px', borderRadius: '50%' }} />
               <span
                 style={{
                   fontFamily: 'Inter, system-ui, sans-serif',
@@ -56,7 +54,7 @@ export default function Footer() {
                   textTransform: 'uppercase',
                 }}
               >
-                APEX PLATES
+                PUNJABI NUMBER PLATES
               </span>
             </div>
             <p
@@ -68,7 +66,7 @@ export default function Footer() {
                 maxWidth: '280px',
               }}
             >
-              Redefining the standard of automotive identity.
+              Premium number plate specialists. Same day service on all products.
             </p>
           </div>
 
@@ -230,7 +228,7 @@ export default function Footer() {
               color: '#757575',
             }}
           >
-            APEX PLATES 2025
+            PUNJABI NUMBER PLATES 2025
           </p>
         </div>
       </div>
