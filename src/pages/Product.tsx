@@ -3,6 +3,8 @@ import { Link } from 'react-router'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import PlatePreview from '../components/PlatePreview'
+import type { PlateStyle } from '../components/PlatePreview'
 import {
   Star,
   Facebook,
@@ -90,13 +92,20 @@ export default function Product() {
   const [regInput, setRegInput] = useState('')
   const [plateConfig, setPlateConfig] = useState<'front_rear' | 'front_only' | 'rear_only'>('front_rear')
   const [plateType, setPlateType] = useState<'road_legal' | 'show_plate'>('road_legal')
+  const [plateStyle, setPlateStyle] = useState<PlateStyle>('4d-5mm')
   const [notes, setNotes] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [showStickyBar, setShowStickyBar] = useState(false)
   const [activeTab, setActiveTab] = useState<'info' | 'specs' | 'delivery'>('info')
 
   /* ─── computed price ─── */
-  const basePrice = 45.00
+  const stylePrices: Record<PlateStyle, number> = {
+    '4d-5mm': 45,
+    '4d-gel': 55,
+    '3d-gel': 35,
+    'ghost': 70,
+  }
+  const basePrice = stylePrices[plateStyle]
   const configDiscount = plateConfig === 'front_rear' ? 0 : 20
   const totalPrice = (basePrice - configDiscount) * quantity
 
@@ -428,25 +437,14 @@ export default function Product() {
                   e.currentTarget.style.boxShadow = 'none'
                 }}
               />
-              {/* Live preview */}
-              {regInput && (
-                <div
-                  style={{
-                    marginTop: '12px',
-                    padding: '12px 16px',
-                    backgroundColor: c.bgSurface,
-                    border: `1px solid ${c.borderSubtle}`,
-                    borderRadius: '8px',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: '1.25rem',
-                    letterSpacing: '0.1em',
-                    color: c.textPrimary,
-                    textTransform: 'uppercase',
-                  }}
-                >
-                  {regInput || 'YOUR REG'}
-                </div>
-              )}
+              {/* Realistic Plate Preview */}
+              <div style={{ marginTop: '16px' }}>
+                <PlatePreview
+                  registration={regInput || 'YOUR REG'}
+                  plateStyle={plateStyle}
+                  showToggle={true}
+                />
+              </div>
               <p style={{ fontSize: '0.8rem', color: c.textMuted, marginTop: '8px' }}>
                 Enter your vehicle&apos;s registration with the exact spacing you require.
               </p>
@@ -628,6 +626,69 @@ export default function Product() {
                   </Link>
                 </div>
               )}
+            </div>
+
+            {/* Plate Style */}
+            <div style={{ marginBottom: '20px' }}>
+              <label
+                style={{
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                  fontWeight: 700,
+                  fontSize: '0.875rem',
+                  color: c.textPrimary,
+                  letterSpacing: '0.15em',
+                  textTransform: 'uppercase',
+                  display: 'block',
+                  marginBottom: '12px',
+                }}
+              >
+                PLATE STYLE
+              </label>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr', gap: '10px' }}>
+                {([
+                  { value: '4d-5mm' as const, label: '4D 5MM', price: '£45', desc: 'Laser-cut acrylic' },
+                  { value: '4d-gel' as const, label: '4D GEL', price: '£55', desc: 'Gloss gel resin' },
+                  { value: '3d-gel' as const, label: '3D GEL', price: '£35', desc: 'Domed resin' },
+                  { value: 'ghost' as const, label: 'GHOST', price: '£70', desc: 'Stealth subtle' },
+                ]).map((opt) => (
+                  <label
+                    key={opt.value}
+                    style={{
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '4px',
+                      padding: '14px 12px',
+                      backgroundColor: c.bgSurface,
+                      border: `2px solid ${plateStyle === opt.value ? c.accentGold : c.borderSubtle}`,
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      transition: `border-color 0.2s ${easeSmooth}, box-shadow 0.2s ${easeSmooth}`,
+                      boxShadow: plateStyle === opt.value ? `0 0 12px ${c.accentGoldGlow}` : 'none',
+                    }}
+                  >
+                    <input
+                      type="radio"
+                      name="plateStyle"
+                      value={opt.value}
+                      checked={plateStyle === opt.value}
+                      onChange={() => setPlateStyle(opt.value)}
+                      style={{ display: 'none' }}
+                    />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: c.textPrimary, letterSpacing: '0.05em' }}>
+                        {opt.label}
+                      </span>
+                      <span style={{ fontSize: '0.75rem', fontWeight: 600, color: c.accentGold, fontFamily: "'JetBrains Mono', monospace" }}>
+                        {opt.price}
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '0.7rem', color: c.textMuted }}>{opt.desc}</span>
+                    {plateStyle === opt.value && (
+                      <div style={{ width: '100%', height: '2px', backgroundColor: c.accentGold, borderRadius: '1px', marginTop: '4px' }} />
+                    )}
+                  </label>
+                ))}
+              </div>
             </div>
 
             {/* Notes */}
