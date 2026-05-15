@@ -262,7 +262,8 @@ export default function Product() {
             {/* Main Image */}
             <div
               style={{
-                aspectRatio: isMobile ? '16/9' : '1/1',
+                aspectRatio: isMobile ? '4/3' : '1/1',
+                maxHeight: isMobile ? '280px' : 'none',
                 borderRadius: '8px',
                 overflow: 'hidden',
                 position: 'relative',

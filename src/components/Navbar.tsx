@@ -49,7 +49,7 @@ export default function Navbar() {
           style={{
             maxWidth: '1440px',
             margin: '0 auto',
-            padding: '0 24px',
+            padding: isMobile ? '0 12px' : '0 24px',
             height: '100%',
             display: 'flex',
             alignItems: 'center',
@@ -66,16 +66,19 @@ export default function Navbar() {
               textDecoration: 'none',
             }}
           >
-            <img src="/logo.png" alt="PNP" style={{ width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', borderRadius: '50%', flexShrink: 0 }} />
+            <img src="/logo.png" alt="PNP" style={{ width: isMobile ? '28px' : '36px', height: isMobile ? '28px' : '36px', borderRadius: '50%', flexShrink: 0 }} />
             <span
               style={{
                 fontFamily: 'Inter, system-ui, sans-serif',
                 fontWeight: 700,
-                fontSize: isMobile ? '0.85rem' : '1.1rem',
-                letterSpacing: isMobile ? '0.5px' : '-0.5px',
+                fontSize: isMobile ? '0.72rem' : '1.1rem',
+                letterSpacing: isMobile ? '0.3px' : '-0.5px',
                 color: '#f2f3f4',
                 textTransform: 'uppercase',
                 whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                maxWidth: isMobile ? '140px' : 'none',
               }}
             >
               PUNJABI NUMBER PLATES
@@ -98,7 +101,7 @@ export default function Navbar() {
           </div>
 
           {/* Utility Icons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '16px' }}>
             <button
               aria-label="Search"
               className="hidden md:block"
@@ -143,7 +146,7 @@ export default function Navbar() {
               onMouseEnter={(e) => (e.currentTarget.style.color = '#ffd700')}
               onMouseLeave={(e) => (e.currentTarget.style.color = '#f2f3f4')}
             >
-              <ShoppingBag size={20} strokeWidth={1.5} />
+              <ShoppingBag size={isMobile ? 18 : 20} strokeWidth={1.5} />
               <span
                 style={{
                   position: 'absolute',
@@ -170,7 +173,7 @@ export default function Navbar() {
                 padding: '4px',
               }}
             >
-              {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+              {mobileOpen ? <X size={isMobile ? 20 : 24} /> : <Menu size={isMobile ? 20 : 24} />}
             </button>
           </div>
         </div>
