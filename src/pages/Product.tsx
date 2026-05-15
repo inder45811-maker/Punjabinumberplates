@@ -835,7 +835,7 @@ export default function Product() {
               >
                 PAYMENT OPTIONS
               </label>
-              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', flexDirection: isMobile ? 'column' : 'row' }}>
                 {([
                   { label: 'PayPal', text: '3 payments of £' + (totalPrice / 3).toFixed(2), color: '#003087' },
                   { label: 'Clearpay', text: '4 payments of £' + (totalPrice / 4).toFixed(2), color: '#A855F7' },
@@ -843,7 +843,7 @@ export default function Product() {
                   <div
                     key={pay.label}
                     style={{
-                      padding: '12px 20px',
+                      padding: isMobile ? '8px 12px' : '12px 20px',
                       background: 'rgba(17, 17, 17, 0.6)',
                       backdropFilter: 'blur(20px)',
                       border: '1px solid rgba(255, 255, 255, 0.05)',
@@ -851,12 +851,15 @@ export default function Product() {
                       display: 'flex',
                       alignItems: 'center',
                       gap: '8px',
-                      fontSize: '0.8rem',
+                      fontSize: isMobile ? '0.7rem' : '0.8rem',
                       color: c.textMuted,
+                      flex: isMobile ? '1 1 auto' : '0 1 auto',
+                      whiteSpace: isMobile ? 'nowrap' : 'nowrap',
+                      overflow: 'hidden',
                     }}
                   >
-                    <span style={{ color: pay.color, fontWeight: 700, fontSize: '0.75rem' }}>{pay.label}</span>
-                    <span>&mdash; {pay.text}</span>
+                    <span style={{ color: pay.color, fontWeight: 700, fontSize: isMobile ? '0.7rem' : '0.75rem', flexShrink: 0 }}>{pay.label}</span>
+                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>&mdash; {pay.text}</span>
                   </div>
                 ))}
               </div>
@@ -985,14 +988,14 @@ export default function Product() {
                 key={tab.key}
                 onClick={() => handleTabChange(tab.key, i)}
                 style={{
-                  padding: isMobile ? '12px 16px' : '16px 32px',
+                  padding: isMobile ? '10px 8px' : '16px 32px',
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
                   fontFamily: 'Inter, system-ui, sans-serif',
                   fontWeight: 700,
-                  fontSize: isMobile ? '0.7rem' : '0.875rem',
-                  letterSpacing: isMobile ? '0.08em' : '0.15em',
+                  fontSize: isMobile ? '0.65rem' : '0.875rem',
+                  letterSpacing: isMobile ? '0.05em' : '0.15em',
                   textTransform: 'uppercase',
                   color: activeTab === tab.key ? c.accentGold : c.textMuted,
                   borderBottom: activeTab === tab.key ? `1px solid ${c.accentGold}` : '1px solid transparent',
@@ -1006,7 +1009,7 @@ export default function Product() {
           </div>
 
           {/* Tab Content */}
-          <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <div style={{ maxWidth: '800px', margin: '0 auto', padding: isMobile ? '0 8px' : '0' }}>
             {activeTab === 'info' && (
               <div style={{ animation: 'fade-in 0.3s ease forwards' }}>
                 <p style={{ color: c.textMuted, lineHeight: 1.8, marginBottom: '16px' }}>
@@ -1055,13 +1058,13 @@ export default function Product() {
             {activeTab === 'delivery' && (
               <div style={{ animation: 'fade-in 0.3s ease forwards' }}>
                 {/* Timeline */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '24px', marginBottom: '40px', flexWrap: 'wrap' }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: isMobile ? '12px' : '24px', marginBottom: '40px', flexWrap: 'wrap' }}>
                   {([
                     { icon: ClipboardList, label: 'ORDER PLACED' },
                     { icon: null, label: 'PRODUCTION (24H)' },
                     { icon: Truck, label: 'DISPATCHED' },
                   ]).map((step, i, arr) => (
-                    <div key={step.label} style={{ display: 'flex', alignItems: 'center', gap: '24px' }}>
+                    <div key={step.label} style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '12px' : '24px' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                         {step.icon ? (
                           <div style={{ width: '48px', height: '48px', borderRadius: '50%', border: `1px solid ${c.accentGold}`, display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.accentGold }}>
@@ -1315,7 +1318,7 @@ export default function Product() {
                   e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)'
                 }}
               >
-                <div style={{ aspectRatio: '4/3', overflow: 'hidden' }}>
+                <div style={{ aspectRatio: isMobile ? '16/9' : '4/3', overflow: 'hidden' }}>
                   <img
                     src={product.image}
                     alt={product.name}
