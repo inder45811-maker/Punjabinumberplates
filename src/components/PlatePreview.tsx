@@ -16,8 +16,9 @@ export const styleConfig: Record<PlateStyle, { label: string; price: number; des
 }
 
 /* ═══════════════════════════════════════════════
-   3D EXTRUDED CHARACTER
-   Multi-layer text-shadow creates physical depth
+   3D EXTRUDED CHARACTER — True 3D via stacked layers
+   Each character is rendered as N overlapping elements
+   offset by 1px to create physical depth.
    ═══════════════════════════════════════════════ */
 function Char3D({
   char,
@@ -34,30 +35,24 @@ function Char3D({
     return <span style={{ display: 'inline-block', width: `calc(${fontSize} * 0.45)` }} />
   }
 
-  const depths: Record<PlateStyle, number> = { '4d-5mm': 7, '4d-gel': 9, '3d-gel': 6, 'ghost': 2 }
-  const depth = depths[plateStyle]
+  // Depth (number of stacked layers)
+  const depth = plateStyle === '4d-5mm' ? 6 : plateStyle === '4d-gel' ? 8 : plateStyle === '3d-gel' ? 5 : 2
 
-  const frontC: Record<PlateStyle, string> = {
-    '4d-5mm': '#111', '4d-gel': '#0a0a0a', '3d-gel': '#161616',
-    'ghost': isRear ? 'rgba(40,40,40,0.32)' : 'rgba(40,40,40,0.28)',
-  }
-  const sideC: Record<PlateStyle, string> = {
-    '4d-5mm': '#2a2a2a', '4d-gel': '#222', '3d-gel': '#3a3a3a',
-    'ghost': isRear ? 'rgba(40,40,40,0.14)' : 'rgba(40,40,40,0.10)',
+  // Front face colour
+  const frontColor: Record<PlateStyle, string> = {
+    '4d-5mm': '#1a1a1a',
+    '4d-gel': '#0d0d0d',
+    '3d-gel': '#181818',
+    'ghost': isRear ? 'rgba(35,35,35,0.30)' : 'rgba(35,35,35,0.25)',
   }
 
-  const sideCol = sideC[plateStyle]
-  const shadows: string[] = []
-  for (let i = 1; i <= depth; i++) {
-    if (sideCol.startsWith('rgba')) {
-      const alpha = Math.max(0.04, 0.40 - i * 0.04)
-      shadows.push(`0 ${i}px 0 ${sideCol.replace(/[\d.]+\)$/, `${alpha.toFixed(2)})`)}`)
-    } else {
-      shadows.push(`0 ${i}px 0 ${sideCol}`)
-    }
+  // Side face colour (darker)
+  const sideBase: Record<PlateStyle, string> = {
+    '4d-5mm': '#2d2d2d',
+    '4d-gel': '#1f1f1f',
+    '3d-gel': '#3d3d3d',
+    'ghost': isRear ? 'rgba(35,35,35,0.15)' : 'rgba(35,35,35,0.10)',
   }
-  shadows.push(`0 ${depth + 2}px ${depth + 2}px rgba(0,0,0,0.12)`)
-  shadows.push(`0 ${depth + 6}px ${depth + 8}px rgba(0,0,0,0.06)`)
 
   return (
     <span style={{
@@ -68,15 +63,43 @@ function Char3D({
       fontSize,
       lineHeight: 1,
       letterSpacing: '0.02em',
-      color: frontC[plateStyle],
+      color: frontColor[plateStyle],
       textTransform: 'uppercase',
       fontStretch: 'condensed',
-      textShadow: shadows.join(', '),
-      transform: `translateY(-${Math.floor(depth / 2)}px)`,
-      marginBottom: `${depth + 4}px`,
-      paddingTop: `${Math.floor(depth / 2)}px`,
+      // Lift the char up so the stack creates depth downward
+      transform: `translateY(-${depth}px)`,
+      marginBottom: `${depth + 2}px`,
     }}>
-      {char}
+      {/* Stacked side layers (behind/front, creating 3D extrusion) */}
+      {Array.from({ length: depth }).map((_, i) => {
+        const layer = i + 1
+        return (
+          <span
+            key={layer}
+            aria-hidden="true"
+            style={{
+              position: 'absolute',
+              top: `${layer}px`,
+              left: '0',
+              fontFamily: "inherit",
+              fontWeight: 900,
+              fontSize: 'inherit',
+              lineHeight: 1,
+              letterSpacing: '0.02em',
+              color: sideBase[plateStyle],
+              textTransform: 'uppercase',
+              fontStretch: 'condensed',
+              pointerEvents: 'none',
+              userSelect: 'none',
+              opacity: plateStyle === 'ghost' ? 0.4 - (layer * 0.04) : 1,
+            }}
+          >
+            {char}
+          </span>
+        )
+      })}
+      {/* Front face */}
+      <span style={{ position: 'relative', zIndex: depth + 1 }}>{char}</span>
     </span>
   )
 }
@@ -112,7 +135,7 @@ export default function PlatePreview({ registration, plateStyle = '4d-5mm', show
   const [isRear, setIsRear] = useState(true)
   const cleanText = (registration || 'YOUR REG').toUpperCase().replace(/[^A-Z0-9\s]/g, '').trim() || 'YOUR REG'
   const charCount = cleanText.replace(/\s/g, '').length
-  const fontSize = charCount <= 4 ? '3.8rem' : charCount <= 6 ? '3rem' : charCount <= 8 ? '2.4rem' : '1.9rem'
+  const fontSize = charCount <= 4 ? '3.6rem' : charCount <= 6 ? '2.8rem' : charCount <= 8 ? '2.2rem' : '1.7rem'
   const bg = isRear ? '#facc15' : '#f5f5f5'
   const si = styleConfig[plateStyle]
   const groups = useMemo(() => cleanText.split(/(\s+)/).filter(Boolean), [cleanText])
@@ -120,23 +143,31 @@ export default function PlatePreview({ registration, plateStyle = '4d-5mm', show
   return (
     <div style={{ width: '100%' }}>
       {/* 3D Perspective Plate */}
-      <div style={{ perspective: '1400px', padding: '10px 0' }}>
-        <div style={{ maxWidth: '520px', margin: '0 auto', transform: 'rotateX(3deg)', transformStyle: 'preserve-3d' }}>
+      <div style={{ perspective: '1400px', padding: '12px 0' }}>
+        <div style={{
+          maxWidth: '520px', margin: '0 auto',
+          transform: 'rotateX(3deg) rotateY(0deg)',
+          transformStyle: 'preserve-3d',
+        }}>
           <div style={{
             position: 'relative', backgroundColor: bg, borderRadius: '8px',
             padding: 'clamp(6px, 1.4vw, 10px)',
             boxShadow: `0 1px 0 rgba(255,255,255,${isRear ? '0.35' : '0.55'}) inset, 0 -1px 0 rgba(0,0,0,0.05) inset, 0 2px 6px rgba(0,0,0,0.10), 0 10px 30px rgba(0,0,0,0.08), 0 24px 48px rgba(0,0,0,0.04)`,
             transition: 'background-color 0.35s ease',
           }}>
-            {/* Bottom thickness */}
-            <div style={{ position: 'absolute', left: '5px', right: '5px', bottom: '-5px', height: '5px', background: isRear ? 'linear-gradient(to bottom, #e8c414, #c9a810)' : 'linear-gradient(to bottom, #ddd, #bbb)', borderRadius: '0 0 6px 6px', zIndex: -1 }} />
+            {/* Bottom edge thickness */}
+            <div style={{
+              position: 'absolute', left: '5px', right: '5px', bottom: '-5px', height: '5px',
+              background: isRear ? 'linear-gradient(to bottom, #e8c414, #c9a810)' : 'linear-gradient(to bottom, #ddd, #bbb)',
+              borderRadius: '0 0 6px 6px', zIndex: -1,
+            }} />
             {/* Inner border */}
             <div style={{ position: 'absolute', inset: '3px', border: plateStyle === 'ghost' ? '1px solid rgba(0,0,0,0.03)' : '1px solid rgba(0,0,0,0.13)', borderRadius: '5px', pointerEvents: 'none', zIndex: 1 }} />
             {/* Content */}
             <div style={{ display: 'flex', alignItems: 'center', gap: 'clamp(6px, 1.4vw, 12px)', position: 'relative', zIndex: 2 }}>
               <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center' }}><GBBadge /></div>
-              <div style={{ width: '1px', height: '58px', backgroundColor: plateStyle === 'ghost' ? 'rgba(0,0,0,0.04)' : 'rgba(0,0,0,0.12)', flexShrink: 0 }} />
-              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '58px', overflow: 'hidden', padding: '0 4px', gap: '0.06em' }}>
+              <div style={{ width: '1px', height: '56px', backgroundColor: plateStyle === 'ghost' ? 'rgba(0,0,0,0.04)' : 'rgba(0,0,0,0.12)', flexShrink: 0 }} />
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '56px', overflow: 'hidden', padding: '0 4px', gap: '0.04em' }}>
                 {groups.map((group, gi) => (
                   <span key={gi} style={{ display: 'inline-flex', whiteSpace: 'nowrap', alignItems: 'center' }}>
                     {group.split('').map((char, ci) => (
@@ -147,11 +178,11 @@ export default function PlatePreview({ registration, plateStyle = '4d-5mm', show
               </div>
             </div>
             {/* BSAU145e */}
-            <div style={{ position: 'absolute', bottom: '5px', right: '8px', zIndex: 3 }}>
+            <div style={{ position: 'absolute', bottom: '5px', right: '8px', zIndex: 10 }}>
               <span style={{ fontFamily: 'Arial, sans-serif', fontSize: 'clamp(3px, 0.7vw, 5px)', color: plateStyle === 'ghost' ? 'rgba(0,0,0,0.10)' : 'rgba(0,0,0,0.22)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>BSAU145e</span>
             </div>
             {/* PNP */}
-            <div style={{ position: 'absolute', bottom: '5px', left: '44px', zIndex: 3 }}>
+            <div style={{ position: 'absolute', bottom: '5px', left: '44px', zIndex: 10 }}>
               <span style={{ fontFamily: 'Arial, sans-serif', fontSize: 'clamp(3px, 0.6vw, 4px)', color: plateStyle === 'ghost' ? 'rgba(0,0,0,0.06)' : 'rgba(0,0,0,0.16)', letterSpacing: '0.02em', textTransform: 'uppercase' }}>PUNJABI NUMBER PLATES</span>
             </div>
           </div>
