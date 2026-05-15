@@ -71,17 +71,14 @@ export default function Navbar() {
               style={{
                 fontFamily: 'Inter, system-ui, sans-serif',
                 fontWeight: 700,
-                fontSize: isMobile ? '0.72rem' : '1.1rem',
-                letterSpacing: isMobile ? '0.3px' : '-0.5px',
+                fontSize: isMobile ? '0.85rem' : '1.1rem',
+                letterSpacing: isMobile ? '0.5px' : '-0.5px',
                 color: '#f2f3f4',
                 textTransform: 'uppercase',
                 whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                maxWidth: isMobile ? '140px' : 'none',
               }}
             >
-              PUNJABI NUMBER PLATES
+              {isMobile ? 'PNP' : 'PUNJABI NUMBER PLATES'}
             </span>
           </Link>
 

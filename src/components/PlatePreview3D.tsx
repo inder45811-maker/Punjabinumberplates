@@ -151,6 +151,7 @@ export default function PlatePreview3D({
 }: PlatePreview3DProps) {
   const [isRear, setIsRear] = useState(true)
   const canvasRef = useRef<HTMLCanvasElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
   const sceneRef = useRef<{
     scene: THREE.Scene
     camera: THREE.PerspectiveCamera
@@ -165,9 +166,10 @@ export default function PlatePreview3D({
   const si = styleConfig[plateStyle]
 
   // Build the scene
-  const buildScene = useCallback((canvas: HTMLCanvasElement) => {
+  const buildScene = useCallback((canvas: HTMLCanvasElement, width: number) => {
+    const height = Math.round(width * 0.38)
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true })
-    renderer.setSize(520, 200)
+    renderer.setSize(width, height)
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
     renderer.shadowMap.enabled = true
     renderer.shadowMap.type = THREE.PCFSoftShadowMap
@@ -177,7 +179,7 @@ export default function PlatePreview3D({
     const scene = new THREE.Scene()
 
     // Camera
-    const camera = new THREE.PerspectiveCamera(35, 520 / 200, 0.1, 100)
+    const camera = new THREE.PerspectiveCamera(35, width / height, 0.1, 100)
     camera.position.set(0, 0, 8)
 
     // Controls
@@ -273,12 +275,15 @@ export default function PlatePreview3D({
   // Load font and render letters
   useEffect(() => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    const container = containerRef.current
+    if (!canvas || !container) return
+
+    const width = container.clientWidth
 
     // Load font then render
     const loader = new FontLoader()
     loader.load(FONT_URL, (font) => {
-      const s = buildScene(canvas)
+      const s = buildScene(canvas, width)
       if (!s) return
 
       sceneRef.current = { ...s, font }
@@ -293,7 +298,22 @@ export default function PlatePreview3D({
       animate()
     })
 
+    // ResizeObserver for responsive canvas
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        const w = entry.contentRect.width
+        if (sceneRef.current && w > 0) {
+          const h = Math.round(w * 0.38)
+          sceneRef.current.renderer.setSize(w, h)
+          sceneRef.current.camera.aspect = w / h
+          sceneRef.current.camera.updateProjectionMatrix()
+        }
+      }
+    })
+    ro.observe(container)
+
     return () => {
+      ro.disconnect()
       if (sceneRef.current) {
         sceneRef.current.renderer.dispose()
         sceneRef.current.controls.dispose()
@@ -316,14 +336,17 @@ export default function PlatePreview3D({
   return (
     <div style={{ width: '100%' }}>
       {/* Canvas */}
-      <div style={{
-        width: '100%',
-        maxWidth: '520px',
-        margin: '0 auto',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        cursor: 'grab',
-      }}>
+      <div
+        ref={containerRef}
+        style={{
+          width: '100%',
+          maxWidth: '520px',
+          margin: '0 auto',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          cursor: 'grab',
+        }}
+      >
         <canvas
           ref={canvasRef}
           style={{
