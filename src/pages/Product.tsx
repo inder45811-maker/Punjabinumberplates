@@ -262,11 +262,11 @@ export default function Product() {
             {/* Main Image */}
             <div
               style={{
-                aspectRatio: '1/1',
+                aspectRatio: isMobile ? '16/9' : '1/1',
                 borderRadius: '8px',
                 overflow: 'hidden',
                 position: 'relative',
-                cursor: 'crosshair',
+                cursor: isMobile ? 'default' : 'crosshair',
                 backgroundColor: c.bgSurface,
               }}
               onMouseMove={handleMouseMove}
@@ -295,8 +295,8 @@ export default function Product() {
                   key={i}
                   onClick={() => setActiveImage(i)}
                   style={{
-                    width: '80px',
-                    height: '80px',
+                    width: isMobile ? '56px' : '80px',
+                    height: isMobile ? '56px' : '80px',
                     borderRadius: '4px',
                     overflow: 'hidden',
                     border: `1px solid ${i === activeImage ? c.accentGold : c.borderSubtle}`,
@@ -1276,7 +1276,7 @@ export default function Product() {
       </section>
 
       {/* ═══════ Section 4: Related Products ═══════ */}
-      <section ref={relatedRef} style={{ padding: '100px 24px', backgroundColor: c.bgSurface }}>
+      <section ref={relatedRef} style={{ padding: isMobile ? '40px 16px' : '100px 24px', backgroundColor: c.bgSurface }}>
         <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
           <h2
             style={{
@@ -1318,7 +1318,7 @@ export default function Product() {
                   e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)'
                 }}
               >
-                <div style={{ aspectRatio: isMobile ? '16/9' : '4/3', overflow: 'hidden' }}>
+                <div style={{ aspectRatio: '4/3', overflow: 'hidden' }}>
                   <img
                     src={product.image}
                     alt={product.name}
