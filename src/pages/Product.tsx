@@ -3,8 +3,8 @@ import { Link } from 'react-router'
 import { useGSAP } from '@gsap/react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import PlatePreview from '../components/PlatePreview'
-import type { PlateStyle } from '../components/PlatePreview'
+import PlatePreview from '../components/PlatePreview3D'
+import type { PlateStyle } from '../components/PlatePreview3D'
 import {
   Star,
   Facebook,
