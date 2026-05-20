@@ -4,16 +4,26 @@ import { Search, User, ShoppingBag, Menu, X } from 'lucide-react'
 import Marquee from 'react-fast-marquee'
 
 const navLinks = [
+  { label: 'HOME', to: '/' },
   { label: 'SHOP', to: '/product' },
-  { label: 'MOTORPASS', to: '/#motorpass' },
+  { label: 'HOLDERS', to: '/plate-holders' },
+  { label: 'KEYRINGS', to: '/keyrings' },
   { label: 'GALLERY', to: '/gallery' },
-  { label: 'ABOUT', to: '/#about' },
+  { label: 'ABOUT', to: '/about' },
   { label: 'CONTACT', to: '/contact' },
 ]
 
 export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768)
+    check()
+    window.addEventListener('resize', check)
+    return () => window.removeEventListener('resize', check)
+  }, [])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10)
@@ -41,7 +51,7 @@ export default function Navbar() {
           style={{
             maxWidth: '1440px',
             margin: '0 auto',
-            padding: '0 24px',
+            padding: isMobile ? '0 12px' : '0 24px',
             height: '100%',
             display: 'flex',
             alignItems: 'center',
@@ -54,24 +64,23 @@ export default function Navbar() {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: '10px',
               textDecoration: 'none',
             }}
           >
-            <svg width="12" height="16" viewBox="0 0 12 16" fill="none">
-              <path d="M2 2L10 8L2 14" stroke="#ffd700" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-            </svg>
+            <img src="/logo.png" alt="PNP" style={{ width: isMobile ? '28px' : '36px', height: isMobile ? '28px' : '36px', borderRadius: '50%', flexShrink: 0 }} />
             <span
               style={{
                 fontFamily: 'Inter, system-ui, sans-serif',
                 fontWeight: 700,
-                fontSize: '1.25rem',
-                letterSpacing: '-2.4px',
+                fontSize: isMobile ? '0.85rem' : '1.1rem',
+                letterSpacing: isMobile ? '0.5px' : '-0.5px',
                 color: '#f2f3f4',
                 textTransform: 'uppercase',
+                whiteSpace: 'nowrap',
               }}
             >
-              APEX PLATES
+              {isMobile ? 'PNP' : 'PUNJABI NUMBER PLATES'}
             </span>
           </Link>
 
@@ -91,7 +100,7 @@ export default function Navbar() {
           </div>
 
           {/* Utility Icons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '16px' }}>
             <button
               aria-label="Search"
               className="hidden md:block"
@@ -136,7 +145,7 @@ export default function Navbar() {
               onMouseEnter={(e) => (e.currentTarget.style.color = '#ffd700')}
               onMouseLeave={(e) => (e.currentTarget.style.color = '#f2f3f4')}
             >
-              <ShoppingBag size={20} strokeWidth={1.5} />
+              <ShoppingBag size={isMobile ? 18 : 20} strokeWidth={1.5} />
               <span
                 style={{
                   position: 'absolute',
@@ -163,7 +172,7 @@ export default function Navbar() {
                 padding: '4px',
               }}
             >
-              {mobileOpen ? <X size={24} /> : <Menu size={24} />}
+              {mobileOpen ? <X size={isMobile ? 20 : 24} /> : <Menu size={isMobile ? 20 : 24} />}
             </button>
           </div>
         </div>
@@ -198,7 +207,7 @@ export default function Navbar() {
               paddingRight: '48px',
             }}
           >
-            DELIVERING PRECISION — ORDER BEFORE 2PM FOR NEXT-DAY DISPATCH — DELIVERING PRECISION — ORDER BEFORE 2PM FOR NEXT-DAY DISPATCH —
+            FOLLOW US ON INSTAGRAM @PUNJABINUMBERPLATES — IN-STORE PICKUP AVAILABLE — ALL PREMIUM CATEGORIES WITH HIGH DISCOUNTS — FOLLOW US ON INSTAGRAM @PUNJABINUMBERPLATES — IN-STORE PICKUP AVAILABLE — ALL PREMIUM CATEGORIES WITH HIGH DISCOUNTS —
           </span>
         </Marquee>
       </div>

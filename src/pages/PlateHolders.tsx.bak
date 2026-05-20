@@ -1,0 +1,2271 @@
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { Link } from 'react-router'
+import { useGSAP } from '@gsap/react'
+import gsap from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import PlatePreview from '../components/PlatePreview3D'
+import type { PlateStyle } from '../components/PlatePreview3D'
+import { Star, Check, Minus, Plus, ShoppingCart, MapPin, ClipboardList, Truck, RotateCcw, MessageCircle, Upload, FileCheck } from 'lucide-react'
+
+gsap.registerPlugin(ScrollTrigger)
+
+/* ──────────────────────────────────────────────
+   DESIGN TOKENS
+   ────────────────────────────────────────────── */
+
+const c = {
+  bgVoid: '#050401',
+  bgSurface: '#111111',
+  textPrimary: '#f2f3f4',
+  textMuted: '#757575',
+  accentGold: '#ffd700',
+  accentGoldGlow: 'rgba(255, 215, 0, 0.15)',
+  accentSienna: '#E09132',
+  alertRed: '#d9534f',
+  successGreen: '#4f8a4f',
+  borderSubtle: '#222222',
+}
+
+const easeSmooth = 'cubic-bezier(0.23, 1, 0.32, 1)'
+
+/* ──────────────────────────────────────────────
+   DATA
+   ────────────────────────────────────────────── */
+
+const galleryImages = [
+  '/plate-holders/sandhu-holders.jpg',
+  '/plate-holders/doaba-holders.jpg',
+  '/plate-holders/bhandal-holders.jpg',
+  '/plate-holders/bhandal-holders-2.jpg',
+  '/plate-holders/bhandal-holders-3.jpg',
+]
+
+const stylePrices: Record<PlateStyle, number> = {
+  '4d-5mm': 45,
+  '4d-gel': 55,
+  '3d-gel': 35,
+  'ghost': 70,
+}
+
+const plateStyleLabels: Record<PlateStyle, string> = {
+  '4d-5mm': '4D 5MM',
+  '4d-gel': '4D GEL',
+  '3d-gel': '3D GEL',
+  'ghost': 'GHOST',
+}
+
+const plateStyleDescriptions: Record<PlateStyle, string> = {
+  '4d-5mm': 'Laser-cut 5mm acrylic',
+  '4d-gel': 'Gloss black gel finish',
+  '3d-gel': 'Domed resin finish',
+  'ghost': 'Stealth reflective',
+}
+
+const reviews = [
+  { name: 'Jagdeep S', date: '3 weeks ago', text: 'Absolutely love my plate holders! The custom SANDHU text on the side looks amazing. Premium quality and fits perfectly.', stars: 5 },
+  { name: 'Harpreet B', date: '1 month ago', text: 'Got the pair with BHANDAL branding and Khanda symbols. Absolutely class product. Fast delivery too!', stars: 5 },
+  { name: 'Manvir D', date: '2 months ago', text: 'Best plate holders I have ever bought. The DOABA styling with the M stripes looks sick on my motor. Highly recommend!', stars: 5 },
+]
+
+const relatedProducts = [
+  { id: 1, name: '4D 5MM ROAD LEGAL PLATES', price: '\u00a345.00', desc: 'Premium 4D 5mm plates. DVLA compliant.', image: '/pnp-07.jpg' },
+  { id: 2, name: '4D GEL ROAD LEGAL PLATES', price: '\u00a355.00', desc: 'Gloss black 4D gel finish.', image: '/pnp-05.jpg' },
+  { id: 3, name: 'GHOST ROAD LEGAL PLATES', price: '\u00a370.00', desc: 'Stealth ghost plates with subtle characters.', image: '/pnp-06.jpg' },
+  { id: 4, name: '3D GEL DOMED PLATES', price: '\u00a335.00', desc: 'Classic 3D gel domed resin finish.', image: '/pnp-03.jpg' },
+]
+
+/* ──────────────────────────────────────────────
+   MAIN EXPORT
+   ────────────────────────────────────────────── */
+
+export default function PlateHolders() {
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  /* State */
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768)
+  const [activeImage, setActiveImage] = useState(0)
+  const [regInput, setRegInput] = useState('')
+  const [holderQuantity, setHolderQuantity] = useState<'single' | 'pair'>('pair')
+  const [plateStyle, setPlateStyle] = useState<PlateStyle>('4d-5mm')
+  const [plateType, setPlateType] = useState<'road_legal' | 'show_plate'>('road_legal')
+  const [proofOfId, setProofOfId] = useState<File | null>(null)
+  const [proofOfEntitlement, setProofOfEntitlement] = useState<File | null>(null)
+  const [sideText, setSideText] = useState('')
+  const [badgeStyle, setBadgeStyle] = useState<'text_only' | 'khanda' | 'm_stripes' | 'map_outline'>('text_only')
+  const [notes, setNotes] = useState('')
+  const [quantity, setQuantity] = useState(1)
+  const [showStickyBar, setShowStickyBar] = useState(false)
+  const [activeTab, setActiveTab] = useState<'info' | 'specs' | 'delivery'>('info')
+  const [zoom, setZoom] = useState(false)
+  const [zoomPos, setZoomPos] = useState({ x: 0.5, y: 0.5 })
+
+  /* Refs */
+  const addToCartRef = useRef<HTMLButtonElement>(null)
+  const detailsRef = useRef<HTMLDivElement>(null)
+  const specsRef = useRef<HTMLDivElement>(null)
+  const relatedRef = useRef<HTMLDivElement>(null)
+  const reviewsRef = useRef<HTMLDivElement>(null)
+  const ctaRef = useRef<HTMLDivElement>(null)
+  const tabsRef = useRef<HTMLDivElement>(null)
+
+  /* Pricing */
+  const holderBase = holderQuantity === 'single' ? 45 : 85
+  const platePrice = stylePrices[plateStyle] * (holderQuantity === 'pair' ? 2 : 1)
+  const totalPrice = (holderBase + platePrice) * quantity
+
+  /* Resize listener */
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768)
+    window.addEventListener('resize', handleResize, { passive: true })
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
+
+  /* Document title */
+  useEffect(() => {
+    document.title = 'Plate Holders \u2014 Punjabi Number Plates'
+  }, [])
+
+  /* Sticky bar scroll listener */
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowStickyBar(window.scrollY > 600)
+    }
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  /* Gallery navigation */
+  const prevImg = useCallback(() => {
+    setActiveImage((i) => (i === 0 ? galleryImages.length - 1 : i - 1))
+  }, [])
+  const nextImg = useCallback(() => {
+    setActiveImage((i) => (i === galleryImages.length - 1 ? 0 : i + 1))
+  }, [])
+
+  /* Zoom handlers */
+  const handleMouseMove = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setZoomPos({
+      x: (e.clientX - rect.left) / rect.width,
+      y: (e.clientY - rect.top) / rect.height,
+    })
+  }, [])
+
+  const handleMouseEnter = useCallback(() => setZoom(true), [])
+  const handleMouseLeave = useCallback(() => setZoom(false), [])
+
+  /* GSAP Animations */
+  useGSAP(() => {
+    if (!containerRef.current) return
+
+    const ctx = gsap.context(() => {
+      /* Details section entrance */
+      if (detailsRef.current) {
+        gsap.fromTo(
+          detailsRef.current.children,
+          { y: 40, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.8,
+            stagger: 0.1,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: detailsRef.current,
+              start: 'top 85%',
+            },
+          }
+        )
+      }
+
+      /* Specs section entrance */
+      if (specsRef.current) {
+        gsap.fromTo(
+          specsRef.current,
+          { y: 50, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.8,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: specsRef.current,
+              start: 'top 85%',
+            },
+          }
+        )
+      }
+
+      /* Reviews entrance */
+      if (reviewsRef.current) {
+        gsap.fromTo(
+          reviewsRef.current.children,
+          { y: 40, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.8,
+            stagger: 0.1,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: reviewsRef.current,
+              start: 'top 85%',
+            },
+          }
+        )
+      }
+
+      /* Related products entrance */
+      if (relatedRef.current) {
+        gsap.fromTo(
+          relatedRef.current.children,
+          { y: 40, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.8,
+            stagger: 0.1,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: relatedRef.current,
+              start: 'top 85%',
+            },
+          }
+        )
+      }
+
+      /* CTA banner entrance */
+      if (ctaRef.current) {
+        gsap.fromTo(
+          ctaRef.current,
+          { y: 50, opacity: 0 },
+          {
+            y: 0,
+            opacity: 1,
+            duration: 0.8,
+            ease: 'power3.out',
+            scrollTrigger: {
+              trigger: ctaRef.current,
+              start: 'top 90%',
+            },
+          }
+        )
+      }
+    }, containerRef)
+
+    return () => ctx.revert()
+  }, { scope: containerRef })
+
+  /* ─── RENDER ─── */
+  return (
+    <div ref={containerRef} style={{ backgroundColor: c.bgVoid, minHeight: '100vh' }}>
+      {/* ── Breadcrumb ── */}
+      <div style={{ maxWidth: '1440px', margin: '0 auto', padding: '24px 24px 0' }}>
+        <nav style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+          <Link
+            to="/"
+            style={{
+              fontFamily: 'Inter, system-ui, sans-serif',
+              fontSize: '0.8rem',
+              color: c.textMuted,
+              textDecoration: 'none',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              transition: 'color 0.3s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = c.accentGold)}
+            onMouseLeave={(e) => (e.currentTarget.style.color = c.textMuted)}
+          >
+            Home
+          </Link>
+          <span style={{ color: c.textMuted, fontSize: '0.8rem' }}>/</span>
+          <Link
+            to="/product"
+            style={{
+              fontFamily: 'Inter, system-ui, sans-serif',
+              fontSize: '0.8rem',
+              color: c.textMuted,
+              textDecoration: 'none',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              transition: 'color 0.3s ease',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.color = c.accentGold)}
+            onMouseLeave={(e) => (e.currentTarget.style.color = c.textMuted)}
+          >
+            Shop
+          </Link>
+          <span style={{ color: c.textMuted, fontSize: '0.8rem' }}>/</span>
+          <span
+            style={{
+              fontFamily: 'Inter, system-ui, sans-serif',
+              fontSize: '0.8rem',
+              color: c.textPrimary,
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+            }}
+          >
+            PLATE HOLDER SURROUNDS
+          </span>
+        </nav>
+      </div>
+
+      {/* ── Product Main ── */}
+      <section
+        style={{
+          maxWidth: '1440px',
+          margin: '0 auto',
+          padding: isMobile ? 'calc(64px + 40px) 16px 80px' : 'calc(64px + 40px) 24px 80px',
+          display: 'grid',
+          gridTemplateColumns: '1fr',
+          gap: isMobile ? '24px' : '40px',
+        }}
+      >
+        {/* ── Gallery ── */}
+        <div style={{ minWidth: 0, maxWidth: '900px', margin: '0 auto', width: '100%' }}>
+          {/* Main image */}
+          <div
+            style={{
+              position: 'relative',
+              borderRadius: '12px',
+              overflow: 'hidden',
+              border: `1px solid ${c.borderSubtle}`,
+              backgroundColor: c.bgSurface,
+              aspectRatio: isMobile ? '4/3' : '16/10',
+              maxHeight: isMobile ? '280px' : '520px',
+              cursor: zoom ? 'crosshair' : 'default',
+            }}
+            onMouseMove={handleMouseMove}
+            onMouseEnter={handleMouseEnter}
+            onMouseLeave={handleMouseLeave}
+          >
+            <img
+              src={galleryImages[activeImage]}
+              alt="Plate Holder Surrounds"
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                display: 'block',
+                transition: 'transform 0.3s ease',
+                transform: zoom ? `scale(1.5) translate(${(0.5 - zoomPos.x) * 30}%, ${(0.5 - zoomPos.y) * 30}%)` : 'scale(1)',
+              }}
+            />
+
+            {/* Nav arrows */}
+            <GalleryArrow direction="left" onClick={prevImg} />
+            <GalleryArrow direction="right" onClick={nextImg} />
+
+            {/* Image counter */}
+            <div
+              style={{
+                position: 'absolute',
+                bottom: '12px',
+                right: '12px',
+                backgroundColor: 'rgba(5, 4, 1, 0.8)',
+                backdropFilter: 'blur(8px)',
+                borderRadius: '6px',
+                padding: '4px 12px',
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontSize: '0.75rem',
+                color: c.textMuted,
+                letterSpacing: '0.05em',
+              }}
+            >
+              {activeImage + 1} / {galleryImages.length}
+            </div>
+          </div>
+
+          {/* Thumbnails */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? 'repeat(5, 1fr)' : `repeat(${galleryImages.length}, 1fr)`,
+              gap: isMobile ? '6px' : '8px',
+              marginTop: '12px',
+            }}
+          >
+            {galleryImages.map((img, i) => (
+              <button
+                key={i}
+                onClick={() => setActiveImage(i)}
+                style={{
+                  borderRadius: '8px',
+                  overflow: 'hidden',
+                  border: `2px solid ${activeImage === i ? c.accentGold : c.borderSubtle}`,
+                  padding: 0,
+                  cursor: 'pointer',
+                  backgroundColor: c.bgSurface,
+                  aspectRatio: '1/1',
+                  transition: 'border-color 0.2s ease',
+                }}
+              >
+                <img
+                  src={img}
+                  alt={`Thumbnail ${i + 1}`}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                    display: 'block',
+                    opacity: activeImage === i ? 1 : 0.6,
+                    transition: 'opacity 0.2s ease',
+                  }}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Product Form ── */}
+        <div style={{ minWidth: 0, maxWidth: '800px', margin: '0 auto', width: '100%' }}>
+          {/* Overline */}
+          <p
+            style={{
+              fontFamily: '"JetBrains Mono", monospace',
+              fontSize: '0.75rem',
+              letterSpacing: '0.15em',
+              color: c.accentGold,
+              textTransform: 'uppercase',
+              margin: '0 0 12px 0',
+            }}
+          >
+            SIGNATURE COLLECTION
+          </p>
+
+          {/* Title */}
+          <h1
+            style={{
+              fontFamily: 'Inter, system-ui, sans-serif',
+              fontWeight: 700,
+              fontSize: isMobile ? '1.75rem' : '2.5rem',
+              letterSpacing: '-0.03em',
+              lineHeight: 1.1,
+              color: c.textPrimary,
+              textTransform: 'uppercase',
+              margin: '0 0 16px 0',
+            }}
+          >
+            LUXURY PLATE HOLDER SURROUNDS
+          </h1>
+
+          {/* Price */}
+          <p
+            style={{
+              fontFamily: 'Inter, system-ui, sans-serif',
+              fontWeight: 700,
+              fontSize: isMobile ? '1.5rem' : '1.75rem',
+              color: c.accentGold,
+              margin: '0 0 8px 0',
+            }}
+          >
+            &pound;{totalPrice.toFixed(2)}
+          </p>
+
+          {/* Subtitle */}
+          <p
+            style={{
+              fontFamily: 'Inter, system-ui, sans-serif',
+              fontSize: '0.85rem',
+              color: c.textMuted,
+              fontStyle: 'italic',
+              margin: '0 0 16px 0',
+            }}
+          >
+            *Includes plate holder(s) with number plates fitted
+          </p>
+
+          {/* Social Proof */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              marginBottom: '20px',
+            }}
+          >
+            <span
+              style={{
+                width: '8px',
+                height: '8px',
+                borderRadius: '50%',
+                backgroundColor: '#4f8a4f',
+                display: 'inline-block',
+                animation: 'pulse-dot 2s infinite',
+              }}
+            />
+            <span
+              style={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontSize: '0.8rem',
+                color: c.textMuted,
+              }}
+            >
+              &#10022; 18 people viewing this right now
+            </span>
+          </div>
+
+          {/* ── Card: Registration + Preview ── */}
+          <div style={{ backgroundColor: '#0d0d0d', border: '1px solid #1e1e1e', borderRadius: '10px', padding: '20px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <label
+                style={{
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                  fontSize: '0.75rem',
+                  letterSpacing: '0.15em',
+                  color: c.textMuted,
+                  textTransform: 'uppercase',
+                }}
+              >
+                YOUR REGISTRATION
+              </label>
+              <span
+                style={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '0.7rem',
+                  color: regInput.length > 8 ? c.alertRed : c.textMuted,
+                }}
+              >
+                {regInput.length}/8
+              </span>
+            </div>
+            <input
+              type="text"
+              value={regInput}
+              onChange={(e) => setRegInput(e.target.value.toUpperCase())}
+              placeholder="ENTER REG"
+              maxLength={8}
+              style={{
+                width: '100%',
+                padding: '14px 16px',
+                borderRadius: '10px',
+                border: `1px solid ${c.borderSubtle}`,
+                backgroundColor: c.bgSurface,
+                color: c.textPrimary,
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '1rem',
+                fontWeight: 700,
+                letterSpacing: '0.1em',
+                textTransform: 'uppercase',
+                outline: 'none',
+                transition: `border-color 0.3s ${easeSmooth}, box-shadow 0.3s ${easeSmooth}`,
+                boxSizing: 'border-box',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = c.accentGold
+                e.currentTarget.style.boxShadow = `0 0 0 3px ${c.accentGoldGlow}`
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = c.borderSubtle
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            />
+          </div>
+
+          {/* Plate Preview */}
+          <div>
+            <PlatePreview registration={regInput || 'YOUR REG'} plateStyle={plateStyle} showToggle={true} />
+          </div>
+          </div>
+
+          {/* ── Card: Holder Quantity ── */}
+          <div style={{ backgroundColor: '#0d0d0d', border: '1px solid #1e1e1e', borderRadius: '10px', padding: '20px', marginBottom: '16px' }}>
+            <label
+              style={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontSize: '0.75rem',
+                letterSpacing: '0.15em',
+                color: c.textMuted,
+                textTransform: 'uppercase',
+                display: 'block',
+                marginBottom: '10px',
+              }}
+            >
+              HOLDER QUANTITY
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              {(['single', 'pair'] as const).map((q) => (
+                <button
+                  key={q}
+                  onClick={() => setHolderQuantity(q)}
+                  style={{
+                    padding: '16px',
+                    borderRadius: '10px',
+                    border: `1px solid ${holderQuantity === q ? c.accentGold : c.borderSubtle}`,
+                    backgroundColor: holderQuantity === q ? c.accentGoldGlow : c.bgSurface,
+                    cursor: 'pointer',
+                    transition: `all 0.3s ${easeSmooth}`,
+                    textAlign: 'left',
+                    position: 'relative',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '20px',
+                      height: '20px',
+                      borderRadius: '50%',
+                      border: `2px solid ${holderQuantity === q ? c.accentGold : c.borderSubtle}`,
+                      backgroundColor: holderQuantity === q ? c.accentGold : 'transparent',
+                      position: 'absolute',
+                      top: '12px',
+                      right: '12px',
+                      transition: `all 0.3s ${easeSmooth}`,
+                    }}
+                  />
+                  <div
+                    style={{
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      fontWeight: 700,
+                      fontSize: '0.85rem',
+                      color: c.textPrimary,
+                      textTransform: 'uppercase',
+                      marginBottom: '4px',
+                    }}
+                  >
+                    {q === 'single' ? '1x Holder (Single)' : '2x Holders (Pair)'}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      fontSize: '0.75rem',
+                      color: c.textMuted,
+                    }}
+                  >
+                    {q === 'single' ? '\u00a345.00' : '\u00a385.00'} base
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Card: Plate Style ── */}
+          <div style={{ backgroundColor: '#0d0d0d', border: '1px solid #1e1e1e', borderRadius: '10px', padding: '20px', marginBottom: '16px' }}>
+            <label
+              style={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontSize: '0.75rem',
+                letterSpacing: '0.15em',
+                color: c.textMuted,
+                textTransform: 'uppercase',
+                display: 'block',
+                marginBottom: '10px',
+              }}
+            >
+              PLATE STYLE
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              {(Object.keys(stylePrices) as PlateStyle[]).map((style) => (
+                <button
+                  key={style}
+                  onClick={() => setPlateStyle(style)}
+                  style={{
+                    padding: '14px',
+                    borderRadius: '10px',
+                    border: `1px solid ${plateStyle === style ? c.accentGold : c.borderSubtle}`,
+                    backgroundColor: plateStyle === style ? c.accentGoldGlow : c.bgSurface,
+                    cursor: 'pointer',
+                    transition: `all 0.3s ${easeSmooth}`,
+                    textAlign: 'left',
+                    position: 'relative',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      border: `2px solid ${plateStyle === style ? c.accentGold : c.borderSubtle}`,
+                      backgroundColor: plateStyle === style ? c.accentGold : 'transparent',
+                      position: 'absolute',
+                      top: '10px',
+                      right: '10px',
+                      transition: `all 0.3s ${easeSmooth}`,
+                    }}
+                  />
+                  <div
+                    style={{
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      color: c.textPrimary,
+                      textTransform: 'uppercase',
+                      marginBottom: '2px',
+                    }}
+                  >
+                    {plateStyleLabels[style]}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      fontSize: '0.7rem',
+                      color: c.textMuted,
+                    }}
+                  >
+                    {plateStyleDescriptions[style]}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      color: c.accentGold,
+                      marginTop: '4px',
+                    }}
+                  >
+                    &pound;{stylePrices[style]}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* ── Holder Side Text ── */}
+          <div style={{ backgroundColor: '#0d0d0d', border: '1px solid #1e1e1e', borderRadius: '10px', padding: '20px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+              <label
+                style={{
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                  fontSize: '0.75rem',
+                  letterSpacing: '0.15em',
+                  color: c.textMuted,
+                  textTransform: 'uppercase',
+                }}
+              >
+                HOLDER SIDE TEXT
+              </label>
+              <span
+                style={{
+                  fontFamily: '"JetBrains Mono", monospace',
+                  fontSize: '0.7rem',
+                  color: sideText.length > 15 ? c.alertRed : c.textMuted,
+                }}
+              >
+                {sideText.length}/15
+              </span>
+            </div>
+            <input
+              type="text"
+              value={sideText}
+              onChange={(e) => setSideText(e.target.value.toUpperCase().slice(0, 15))}
+              placeholder="Enter your custom text (e.g. SANDHU)"
+              maxLength={15}
+              style={{
+                width: '100%',
+                padding: '14px 16px',
+                borderRadius: '10px',
+                border: `1px solid ${c.borderSubtle}`,
+                backgroundColor: c.bgSurface,
+                color: c.textPrimary,
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '0.95rem',
+                fontWeight: 600,
+                letterSpacing: '0.05em',
+                textTransform: 'uppercase',
+                outline: 'none',
+                transition: `border-color 0.3s ${easeSmooth}, box-shadow 0.3s ${easeSmooth}`,
+                boxSizing: 'border-box',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = c.accentGold
+                e.currentTarget.style.boxShadow = `0 0 0 3px ${c.accentGoldGlow}`
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = c.borderSubtle
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            />
+            <p
+              style={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontSize: '0.75rem',
+                color: c.textMuted,
+                margin: '6px 0 0 0',
+              }}
+            >
+              Custom text displayed on the side of your plate holder. Max 15 characters.
+            </p>
+          </div>
+
+          {/* ── Card: Holder Badge Style ── */}
+          <div style={{ backgroundColor: '#0d0d0d', border: '1px solid #1e1e1e', borderRadius: '10px', padding: '20px', marginBottom: '16px' }}>
+            <label
+              style={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontSize: '0.75rem',
+                letterSpacing: '0.15em',
+                color: c.textMuted,
+                textTransform: 'uppercase',
+                display: 'block',
+                marginBottom: '10px',
+              }}
+            >
+              HOLDER BADGE STYLE
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              {([
+                { key: 'text_only', label: 'TEXT ONLY', desc: 'Clean text styling' },
+                { key: 'khanda', label: 'KHANDA', desc: 'Sikh symbol emblem' },
+                { key: 'm_stripes', label: 'M STRIPES', desc: 'Sport stripe design' },
+                { key: 'map_outline', label: 'MAP OUTLINE', desc: 'Punjab map design' },
+              ] as const).map((badge) => (
+                <button
+                  key={badge.key}
+                  onClick={() => setBadgeStyle(badge.key)}
+                  style={{
+                    padding: '14px',
+                    borderRadius: '10px',
+                    border: `1px solid ${badgeStyle === badge.key ? c.accentGold : c.borderSubtle}`,
+                    backgroundColor: badgeStyle === badge.key ? c.accentGoldGlow : c.bgSurface,
+                    cursor: 'pointer',
+                    transition: `all 0.3s ${easeSmooth}`,
+                    textAlign: 'left',
+                    position: 'relative',
+                  }}
+                >
+                  <div
+                    style={{
+                      width: '18px',
+                      height: '18px',
+                      borderRadius: '50%',
+                      border: `2px solid ${badgeStyle === badge.key ? c.accentGold : c.borderSubtle}`,
+                      backgroundColor: badgeStyle === badge.key ? c.accentGold : 'transparent',
+                      position: 'absolute',
+                      top: '10px',
+                      right: '10px',
+                      transition: `all 0.3s ${easeSmooth}`,
+                    }}
+                  />
+                  <div
+                    style={{
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      fontWeight: 700,
+                      fontSize: '0.8rem',
+                      color: c.textPrimary,
+                      textTransform: 'uppercase',
+                      marginBottom: '2px',
+                    }}
+                  >
+                    {badge.label}
+                  </div>
+                  <div
+                    style={{
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      fontSize: '0.7rem',
+                      color: c.textMuted,
+                    }}
+                  >
+                    {badge.desc}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          </div>
+
+          {/* ── Card: Plate Type + Documents ── */}
+          <div style={{ backgroundColor: '#0d0d0d', border: '1px solid #1e1e1e', borderRadius: '10px', padding: '20px', marginBottom: '16px' }}>
+            <label
+              style={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontSize: '0.75rem',
+                letterSpacing: '0.15em',
+                color: c.textMuted,
+                textTransform: 'uppercase',
+                display: 'block',
+                marginBottom: '10px',
+              }}
+            >
+              PLATE TYPE
+            </label>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+              <button
+                onClick={() => setPlateType('road_legal')}
+                style={{
+                  padding: '14px',
+                  borderRadius: '10px',
+                  border: `1px solid ${plateType === 'road_legal' ? c.accentGold : c.borderSubtle}`,
+                  backgroundColor: plateType === 'road_legal' ? c.accentGoldGlow : c.bgSurface,
+                  cursor: 'pointer',
+                  transition: `all 0.3s ${easeSmooth}`,
+                  textAlign: 'left',
+                  position: 'relative',
+                }}
+              >
+                <div
+                  style={{
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '50%',
+                    border: `2px solid ${plateType === 'road_legal' ? c.accentGold : c.borderSubtle}`,
+                    backgroundColor: plateType === 'road_legal' ? c.accentGold : 'transparent',
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    transition: `all 0.3s ${easeSmooth}`,
+                  }}
+                />
+                <div
+                  style={{
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    fontWeight: 700,
+                    fontSize: '0.8rem',
+                    color: c.textPrimary,
+                    textTransform: 'uppercase',
+                    marginBottom: '2px',
+                  }}
+                >
+                  ROAD LEGAL
+                </div>
+                <div
+                  style={{
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    fontSize: '0.7rem',
+                    color: c.textMuted,
+                  }}
+                >
+                  DVLA compliant
+                </div>
+              </button>
+              <button
+                onClick={() => setPlateType('show_plate')}
+                style={{
+                  padding: '14px',
+                  borderRadius: '10px',
+                  border: `1px solid ${plateType === 'show_plate' ? c.alertRed : c.borderSubtle}`,
+                  backgroundColor: plateType === 'show_plate' ? 'rgba(217, 83, 79, 0.1)' : c.bgSurface,
+                  cursor: 'pointer',
+                  transition: `all 0.3s ${easeSmooth}`,
+                  textAlign: 'left',
+                  position: 'relative',
+                }}
+              >
+                <div
+                  style={{
+                    width: '18px',
+                    height: '18px',
+                    borderRadius: '50%',
+                    border: `2px solid ${plateType === 'show_plate' ? c.alertRed : c.borderSubtle}`,
+                    backgroundColor: plateType === 'show_plate' ? c.alertRed : 'transparent',
+                    position: 'absolute',
+                    top: '10px',
+                    right: '10px',
+                    transition: `all 0.3s ${easeSmooth}`,
+                  }}
+                />
+                <div
+                  style={{
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    fontWeight: 700,
+                    fontSize: '0.8rem',
+                    color: c.textPrimary,
+                    textTransform: 'uppercase',
+                    marginBottom: '2px',
+                  }}
+                >
+                  SHOW PLATE
+                </div>
+                <div
+                  style={{
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    fontSize: '0.7rem',
+                    color: c.textMuted,
+                  }}
+                >
+                  Off-road use only
+                </div>
+              </button>
+            </div>
+
+            {/* Document Upload — Road Legal Only */}
+            {plateType === 'road_legal' && (
+              <div style={{ marginTop: '16px' }}>
+                <a
+                  href="#"
+                  onClick={(e) => { e.preventDefault(); alert('Required Documents Guide:\n\nProof of Identification:\n- Driving Licence (photocard)\n- Passport\n- National ID Card\n- Birth Certificate\n\nProof of Entitlement:\n- V5C Vehicle Registration Certificate\n- V750 Certificate of Entitlement\n- V778 Retention Document\n- VE30 Vehicle Excise Refund\n- DVLA eV948 Certificate'); }}
+                  style={{
+                    display: 'block',
+                    padding: '12px 16px',
+                    backgroundColor: 'rgba(255, 215, 0, 0.08)',
+                    border: `1px dashed ${c.accentGold}`,
+                    borderRadius: '8px',
+                    color: c.accentGold,
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    fontWeight: 600,
+                    fontSize: '0.8rem',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    textDecoration: 'none',
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    marginBottom: '16px',
+                    transition: 'background-color 0.2s ease',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 215, 0, 0.15)' }}
+                  onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = 'rgba(255, 215, 0, 0.08)' }}
+                >
+                  <FileCheck size={14} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'middle' }} />
+                  View Required Documents Guide
+                </a>
+
+                {/* Proof of Identification */}
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    fontWeight: 700,
+                    fontSize: '0.8rem',
+                    color: c.textPrimary,
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    display: 'block',
+                    marginBottom: '8px',
+                  }}>
+                    Proof of Identification <span style={{ color: c.alertRed }}>*</span>
+                  </label>
+                  <label style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: '24px 16px',
+                    border: `2px dashed ${proofOfId ? c.successGreen : c.borderSubtle}`,
+                    borderRadius: '8px',
+                    backgroundColor: proofOfId ? 'rgba(79, 138, 79, 0.05)' : c.bgSurface,
+                    cursor: 'pointer',
+                    transition: 'border-color 0.2s ease, background-color 0.2s ease',
+                  }}>
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      onChange={(e) => setProofOfId(e.target.files?.[0] || null)}
+                      style={{ display: 'none' }}
+                    />
+                    {proofOfId ? (
+                      <>
+                        <FileCheck size={24} style={{ color: c.successGreen }} />
+                        <span style={{ fontSize: '0.8rem', color: c.successGreen, fontWeight: 600 }}>{proofOfId.name}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={24} style={{ color: c.textMuted }} />
+                        <span style={{ fontSize: '0.8rem', color: c.textMuted }}>Upload 1x Proof of Identification</span>
+                        <span style={{ fontSize: '0.7rem', color: c.textMuted, opacity: 0.6 }}>Accept .jpg, .png, .pdf</span>
+                      </>
+                    )}
+                  </label>
+                </div>
+
+                {/* Proof of Entitlement */}
+                <div style={{ marginBottom: '4px' }}>
+                  <label style={{
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    fontWeight: 700,
+                    fontSize: '0.8rem',
+                    color: c.textPrimary,
+                    letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                    display: 'block',
+                    marginBottom: '8px',
+                  }}>
+                    Proof of Entitlement <span style={{ color: c.alertRed }}>*</span>
+                  </label>
+                  <label style={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    padding: '24px 16px',
+                    border: `2px dashed ${proofOfEntitlement ? c.successGreen : c.borderSubtle}`,
+                    borderRadius: '8px',
+                    backgroundColor: proofOfEntitlement ? 'rgba(79, 138, 79, 0.05)' : c.bgSurface,
+                    cursor: 'pointer',
+                    transition: 'border-color 0.2s ease, background-color 0.2s ease',
+                  }}>
+                    <input
+                      type="file"
+                      accept=".jpg,.jpeg,.png,.pdf"
+                      onChange={(e) => setProofOfEntitlement(e.target.files?.[0] || null)}
+                      style={{ display: 'none' }}
+                    />
+                    {proofOfEntitlement ? (
+                      <>
+                        <FileCheck size={24} style={{ color: c.successGreen }} />
+                        <span style={{ fontSize: '0.8rem', color: c.successGreen, fontWeight: 600 }}>{proofOfEntitlement.name}</span>
+                      </>
+                    ) : (
+                      <>
+                        <Upload size={24} style={{ color: c.textMuted }} />
+                        <span style={{ fontSize: '0.8rem', color: c.textMuted }}>Upload 1x Proof of Entitlement</span>
+                        <span style={{ fontSize: '0.7rem', color: c.textMuted, opacity: 0.6 }}>Accept .jpg, .png, .pdf</span>
+                      </>
+                    )}
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* ── Card: Notes ── */}
+          <div style={{ backgroundColor: '#0d0d0d', border: '1px solid #1e1e1e', borderRadius: '10px', padding: '20px', marginBottom: '16px' }}>
+            <label
+              style={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontSize: '0.75rem',
+                letterSpacing: '0.15em',
+                color: c.textMuted,
+                textTransform: 'uppercase',
+                display: 'block',
+                marginBottom: '10px',
+              }}
+            >
+              ADDITIONAL NOTES
+            </label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Any special requests or notes for your order..."
+              rows={3}
+              style={{
+                width: '100%',
+                padding: '14px 16px',
+                borderRadius: '10px',
+                border: `1px solid ${c.borderSubtle}`,
+                backgroundColor: c.bgSurface,
+                color: c.textPrimary,
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontSize: '0.9rem',
+                outline: 'none',
+                resize: 'vertical',
+                transition: `border-color 0.3s ${easeSmooth}, box-shadow 0.3s ${easeSmooth}`,
+                boxSizing: 'border-box',
+              }}
+              onFocus={(e) => {
+                e.currentTarget.style.borderColor = c.accentGold
+                e.currentTarget.style.boxShadow = `0 0 0 3px ${c.accentGoldGlow}`
+              }}
+              onBlur={(e) => {
+                e.currentTarget.style.borderColor = c.borderSubtle
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            />
+          </div>
+
+          </div>
+
+          {/* ── Card: Quantity + Buttons ── */}
+          <div style={{ backgroundColor: '#0d0d0d', border: '1px solid #1e1e1e', borderRadius: '10px', padding: '20px', marginBottom: '16px' }}>
+            <label
+              style={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontSize: '0.75rem',
+                letterSpacing: '0.15em',
+                color: c.textMuted,
+                textTransform: 'uppercase',
+                display: 'block',
+                marginBottom: '10px',
+              }}
+            >
+              QUANTITY
+            </label>
+            <div
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                border: `1px solid ${c.borderSubtle}`,
+                borderRadius: '10px',
+                overflow: 'hidden',
+              }}
+            >
+              <button
+                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: c.textPrimary,
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = c.borderSubtle)}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <Minus size={16} />
+              </button>
+              <span
+                style={{
+                  width: '48px',
+                  textAlign: 'center',
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                  fontWeight: 700,
+                  fontSize: '1rem',
+                  color: c.textPrimary,
+                }}
+              >
+                {quantity}
+              </span>
+              <button
+                onClick={() => setQuantity((q) => q + 1)}
+                style={{
+                  width: '44px',
+                  height: '44px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: c.textPrimary,
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = c.borderSubtle)}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <Plus size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* ── Payment Options ── */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '12px',
+              marginBottom: '24px',
+              flexWrap: 'wrap',
+            }}
+          >
+            <PaymentBadge label="PayPal" />
+            <PaymentBadge label="Clearpay" />
+            <PaymentBadge label="Klarna" />
+          </div>
+
+          {/* ── Action Buttons ── */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <button
+              ref={addToCartRef}
+              style={{
+                width: '100%',
+                padding: '18px 32px',
+                borderRadius: '10px',
+                backgroundColor: 'transparent',
+                color: c.accentGold,
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontWeight: 700,
+                fontSize: isMobile ? '0.85rem' : '1rem',
+                letterSpacing: '-0.02em',
+                textTransform: 'uppercase',
+                border: `1px solid ${c.accentGold}`,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                transition: `all 0.3s ${easeSmooth}`,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = c.accentGold
+                e.currentTarget.style.color = c.bgVoid
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = 'transparent'
+                e.currentTarget.style.color = c.accentGold
+              }}
+            >
+              <ClipboardList size={18} />
+              ADD TO REG BUILDER
+            </button>
+            <button
+              style={{
+                width: '100%',
+                padding: '18px 32px',
+                borderRadius: '10px',
+                backgroundColor: '#111111',
+                color: c.accentGold,
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontWeight: 700,
+                fontSize: isMobile ? '0.85rem' : '1rem',
+                letterSpacing: '-0.02em',
+                textTransform: 'uppercase',
+                border: `1px solid ${c.accentGold}`,
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                transition: `all 0.3s ${easeSmooth}`,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = c.accentGold
+                e.currentTarget.style.color = c.bgVoid
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = '#111111'
+                e.currentTarget.style.color = c.accentGold
+              }}
+            >
+              <MessageCircle size={18} />
+              ORDER ON WHATSAPP
+            </button>
+          </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Info Tabs Section ── */}
+      <section
+        style={{
+          backgroundColor: c.bgSurface,
+          padding: '80px 24px',
+        }}
+      >
+        <div
+          ref={tabsRef}
+          style={{ maxWidth: '1440px', margin: '0 auto' }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              gap: '4px',
+              marginBottom: '32px',
+              borderBottom: `1px solid ${c.borderSubtle}`,
+              paddingBottom: '16px',
+            }}
+          >
+            {(['info', 'specs', 'delivery'] as const).map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                style={{
+                  padding: '10px 20px',
+                  borderRadius: '8px',
+                  border: 'none',
+                  backgroundColor: activeTab === tab ? c.bgVoid : 'transparent',
+                  color: activeTab === tab ? c.accentGold : c.textMuted,
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                  fontWeight: activeTab === tab ? 700 : 600,
+                  fontSize: '0.75rem',
+                  letterSpacing: '0.1em',
+                  textTransform: 'uppercase',
+                  cursor: 'pointer',
+                  transition: 'background-color 0.3s ease, color 0.3s ease',
+                }}
+              >
+                {tab === 'info' ? 'INFO' : tab === 'specs' ? 'SPECS' : 'DELIVERY'}
+              </button>
+            ))}
+          </div>
+
+          {/* Tab Indicator */}
+          <div style={{ position: 'relative', height: '2px', backgroundColor: c.borderSubtle, marginBottom: '32px' }}>
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                height: '100%',
+                width: '33.33%',
+                backgroundColor: c.accentGold,
+                transition: `left 0.4s ${easeSmooth}`,
+                left: activeTab === 'info' ? '0%' : activeTab === 'specs' ? '33.33%' : '66.66%',
+              }}
+            />
+          </div>
+
+          {/* Tab Content */}
+          <div ref={detailsRef}>
+            {activeTab === 'info' && (
+              <div>
+                <h3
+                  style={{
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    fontWeight: 700,
+                    fontSize: '1.25rem',
+                    color: c.textPrimary,
+                    textTransform: 'uppercase',
+                    marginBottom: '16px',
+                  }}
+                >
+                  Luxury Plate Holder Surrounds
+                </h3>
+                <p
+                  style={{
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    fontSize: '0.95rem',
+                    color: c.textMuted,
+                    lineHeight: 1.7,
+                    marginBottom: '16px',
+                  }}
+                >
+                  Elevate your vehicle&apos;s presence with our premium plate holder surrounds. Each holder is precision-engineered from high-grade ABS polymer, featuring a sleek gloss black finish that complements any vehicle colour. Custom side text and your choice of badge styling make these truly unique to you.
+                </p>
+                <p
+                  style={{
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    fontSize: '0.95rem',
+                    color: c.textMuted,
+                    lineHeight: 1.7,
+                    marginBottom: '16px',
+                  }}
+                >
+                  Every holder comes complete with your choice of number plate fitted and ready to install. The weather-resistant construction ensures your plates stay protected and looking pristine in all conditions.
+                </p>
+                <ul style={{ listStyle: 'none', padding: 0, margin: '24px 0 0 0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {[
+                    'Premium ABS polymer construction',
+                    'Gloss black finish',
+                    'Custom side text (up to 15 characters)',
+                    'Choice of 4 badge styles',
+                    'Number plate included and fitted',
+                    'Universal fitment for UK vehicles',
+                    'Weather-resistant materials',
+                  ].map((item) => (
+                    <li
+                      key={item}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '10px',
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                        fontSize: '0.9rem',
+                        color: c.textPrimary,
+                      }}
+                    >
+                      <Check size={16} color={c.accentGold} />
+                      {item}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {activeTab === 'specs' && (
+              <div ref={specsRef}>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
+                    gap: '24px',
+                  }}
+                >
+                  {[
+                    { label: 'Material', value: 'High-grade ABS polymer' },
+                    { label: 'Finish', value: 'Gloss black' },
+                    { label: 'Dimensions', value: 'Standard UK plate size (520 x 111mm)' },
+                    { label: 'Side Text Max', value: '15 characters' },
+                    { label: 'Fitment', value: 'Universal screw/ adhesive mount' },
+                    { label: 'Weight', value: 'Approx. 350g per holder' },
+                    { label: 'Warranty', value: '1 year' },
+                    { label: 'Included', value: 'Holder + fitted number plate' },
+                  ].map((spec) => (
+                    <div
+                      key={spec.label}
+                      style={{
+                        padding: '20px',
+                        borderRadius: '10px',
+                        backgroundColor: c.bgVoid,
+                        border: `1px solid ${c.borderSubtle}`,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                          fontSize: '0.7rem',
+                          letterSpacing: '0.15em',
+                          color: c.textMuted,
+                          textTransform: 'uppercase',
+                          marginBottom: '6px',
+                        }}
+                      >
+                        {spec.label}
+                      </div>
+                      <div
+                        style={{
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                          fontWeight: 600,
+                          fontSize: '0.95rem',
+                          color: c.textPrimary,
+                        }}
+                      >
+                        {spec.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'delivery' && (
+              <div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '16px',
+                      padding: '24px',
+                      borderRadius: '10px',
+                      backgroundColor: c.bgVoid,
+                      border: `1px solid ${c.borderSubtle}`,
+                    }}
+                  >
+                    <Truck size={24} color={c.accentGold} style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <div>
+                      <h4
+                        style={{
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                          fontWeight: 700,
+                          fontSize: '1rem',
+                          color: c.textPrimary,
+                          textTransform: 'uppercase',
+                          margin: '0 0 8px 0',
+                        }}
+                      >
+                        Next Day Delivery
+                      </h4>
+                      <p
+                        style={{
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                          fontSize: '0.9rem',
+                          color: c.textMuted,
+                          lineHeight: 1.6,
+                          margin: 0,
+                        }}
+                      >
+                        All orders placed before 2pm Monday to Friday are dispatched the same day via DPD Next Day service. Orders placed after 2pm or on weekends are dispatched the next working day.
+                      </p>
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '16px',
+                      padding: '24px',
+                      borderRadius: '10px',
+                      backgroundColor: c.bgVoid,
+                      border: `1px solid ${c.borderSubtle}`,
+                    }}
+                  >
+                    <RotateCcw size={24} color={c.accentGold} style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <div>
+                      <h4
+                        style={{
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                          fontWeight: 700,
+                          fontSize: '1rem',
+                          color: c.textPrimary,
+                          textTransform: 'uppercase',
+                          margin: '0 0 8px 0',
+                        }}
+                      >
+                        30-Day Returns
+                      </h4>
+                      <p
+                        style={{
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                          fontSize: '0.9rem',
+                          color: c.textMuted,
+                          lineHeight: 1.6,
+                          margin: 0,
+                        }}
+                      >
+                        If you&apos;re not completely satisfied, return your plate holders within 30 days for a full refund. Custom text orders are non-refundable unless faulty.
+                      </p>
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: '16px',
+                      padding: '24px',
+                      borderRadius: '10px',
+                      backgroundColor: c.bgVoid,
+                      border: `1px solid ${c.borderSubtle}`,
+                    }}
+                  >
+                    <MapPin size={24} color={c.accentGold} style={{ flexShrink: 0, marginTop: '2px' }} />
+                    <div>
+                      <h4
+                        style={{
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                          fontWeight: 700,
+                          fontSize: '1rem',
+                          color: c.textPrimary,
+                          textTransform: 'uppercase',
+                          margin: '0 0 8px 0',
+                        }}
+                      >
+                        In-Store Collection
+                      </h4>
+                      <p
+                        style={{
+                          fontFamily: 'Inter, system-ui, sans-serif',
+                          fontSize: '0.9rem',
+                          color: c.textMuted,
+                          lineHeight: 1.6,
+                          margin: 0,
+                        }}
+                      >
+                        Collect your order from our workshop. Same-day collection available on most orders placed before 12pm. You&apos;ll receive a text when your order is ready.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Reviews Section ── */}
+      <section
+        style={{
+          backgroundColor: c.bgVoid,
+          padding: '80px 24px',
+        }}
+      >
+        <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '48px' }}>
+            <p
+              style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '0.75rem',
+                letterSpacing: '0.15em',
+                color: c.accentGold,
+                textTransform: 'uppercase',
+                margin: '0 0 16px 0',
+              }}
+            >
+              CUSTOMER REVIEWS
+            </p>
+            <h2
+              style={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontWeight: 700,
+                fontSize: isMobile ? '1.75rem' : '2rem',
+                letterSpacing: '-0.03em',
+                color: c.textPrimary,
+                textTransform: 'uppercase',
+                margin: '0 0 16px 0',
+              }}
+            >
+              What Our Customers Say
+            </h2>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+              <div style={{ display: 'flex', gap: '2px' }}>
+                {[...Array(5)].map((_, i) => (
+                  <Star key={i} size={20} fill={c.accentGold} color={c.accentGold} />
+                ))}
+              </div>
+              <span
+                style={{
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                  fontWeight: 600,
+                  fontSize: '1rem',
+                  color: c.textPrimary,
+                }}
+              >
+                5.0
+              </span>
+              <span
+                style={{
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                  fontSize: '0.85rem',
+                  color: c.textMuted,
+                }}
+              >
+                (461 reviews)
+              </span>
+            </div>
+          </div>
+
+          <div
+            ref={reviewsRef}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+              gap: '24px',
+            }}
+          >
+            {reviews.map((review, i) => (
+              <div
+                key={i}
+                style={{
+                  padding: '28px',
+                  borderRadius: '12px',
+                  backgroundColor: c.bgSurface,
+                  border: `1px solid ${c.borderSubtle}`,
+                  transition: `transform 0.3s ${easeSmooth}, box-shadow 0.3s ${easeSmooth}`,
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = 'translateY(-4px)'
+                  e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.3)'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = 'translateY(0)'
+                  e.currentTarget.style.boxShadow = 'none'
+                }}
+              >
+                <div style={{ display: 'flex', gap: '2px', marginBottom: '16px' }}>
+                  {[...Array(5)].map((_, j) => (
+                    <Star
+                      key={j}
+                      size={14}
+                      fill={j < review.stars ? c.accentGold : 'transparent'}
+                      color={j < review.stars ? c.accentGold : c.borderSubtle}
+                    />
+                  ))}
+                </div>
+                <p
+                  style={{
+                    fontFamily: 'Inter, system-ui, sans-serif',
+                    fontSize: '0.9rem',
+                    color: c.textPrimary,
+                    lineHeight: 1.7,
+                    margin: '0 0 20px 0',
+                  }}
+                >
+                  &ldquo;{review.text}&rdquo;
+                </p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span
+                    style={{
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      fontWeight: 700,
+                      fontSize: '0.85rem',
+                      color: c.textPrimary,
+                    }}
+                  >
+                    {review.name}
+                  </span>
+                  <span
+                    style={{
+                      fontFamily: 'Inter, system-ui, sans-serif',
+                      fontSize: '0.75rem',
+                      color: c.textMuted,
+                    }}
+                  >
+                    {review.date}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* View on Google link */}
+          <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '12px', marginTop: '40px' }}>
+            <a
+              href="https://maps.app.goo.gl/P5FN5jQfMAKv4tgy7"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                padding: '12px 28px', borderRadius: '9999px',
+                border: `1px solid ${c.borderSubtle}`, backgroundColor: 'transparent', color: c.textPrimary,
+                fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 600,
+                fontSize: isMobile ? '0.75rem' : '0.85rem', letterSpacing: '-0.24px', textTransform: 'uppercase',
+                textDecoration: 'none',
+                transition: 'border-color 0.3s ease, color 0.3s ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.borderColor = c.accentGold; e.currentTarget.style.color = c.accentGold }}
+              onMouseLeave={(e) => { e.currentTarget.style.borderColor = c.borderSubtle; e.currentTarget.style.color = c.textPrimary }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+              </svg>
+              VIEW ALL REVIEWS ON GOOGLE
+            </a>
+            <a
+              href="https://search.google.com/local/writereview?placeid=ChIJZaCmAKCbcEgRw_NK6nFc0pc"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: '8px',
+                padding: '12px 28px', borderRadius: '9999px',
+                border: `1px solid ${c.accentGold}`, backgroundColor: c.accentGold, color: c.bgVoid,
+                fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 700,
+                fontSize: isMobile ? '0.75rem' : '0.85rem', letterSpacing: '-0.24px', textTransform: 'uppercase',
+                textDecoration: 'none',
+                transition: 'all 0.3s ease',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = 'transparent'; e.currentTarget.style.color = c.accentGold }}
+              onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = c.accentGold; e.currentTarget.style.color = c.bgVoid }}
+            >
+              <Star size={14} />
+              WRITE A REVIEW
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Related Products ── */}
+      <section
+        style={{
+          backgroundColor: c.bgSurface,
+          padding: '80px 24px',
+        }}
+      >
+        <div style={{ maxWidth: '1440px', margin: '0 auto' }}>
+          <h2
+            style={{
+              fontFamily: 'Inter, system-ui, sans-serif',
+              fontWeight: 700,
+              fontSize: isMobile ? '1.5rem' : '2rem',
+              letterSpacing: '-0.03em',
+              color: c.textPrimary,
+              textTransform: 'uppercase',
+              marginBottom: '40px',
+            }}
+          >
+            You May Also Like
+          </h2>
+
+          <div
+            ref={relatedRef}
+            style={{
+              display: 'grid',
+              gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+              gap: '24px',
+            }}
+            className="gallery-grid"
+          >
+            {relatedProducts.map((product) => (
+              <RelatedProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA Banner ── */}
+      <section
+        style={{
+          backgroundColor: c.bgVoid,
+          padding: '80px 24px',
+        }}
+      >
+        <div
+          ref={ctaRef}
+          style={{
+            maxWidth: '1440px',
+            margin: '0 auto',
+            textAlign: 'center',
+          }}
+        >
+          <div
+            style={{
+              padding: isMobile ? '48px 24px' : '80px 48px',
+              borderRadius: '16px',
+              backgroundColor: c.bgSurface,
+              border: `1px solid ${c.borderSubtle}`,
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <div
+              style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                background: `radial-gradient(circle at 50% 0%, ${c.accentGoldGlow}, transparent 60%)`,
+                pointerEvents: 'none',
+              }}
+            />
+            <p
+              style={{
+                fontFamily: '"JetBrains Mono", monospace',
+                fontSize: '0.75rem',
+                letterSpacing: '0.2em',
+                color: c.accentGold,
+                textTransform: 'uppercase',
+                margin: '0 0 16px 0',
+                position: 'relative',
+              }}
+            >
+              EXPLORE OUR RANGE
+            </p>
+            <h2
+              style={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontWeight: 700,
+                fontSize: isMobile ? '1.5rem' : '2.5rem',
+                letterSpacing: '-0.03em',
+                color: c.textPrimary,
+                textTransform: 'uppercase',
+                margin: '0 0 24px 0',
+                position: 'relative',
+              }}
+            >
+              READY TO UPGRADE YOUR PLATES?
+            </h2>
+            <p
+              style={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontSize: '1rem',
+                color: c.textMuted,
+                lineHeight: 1.6,
+                margin: '0 0 32px 0',
+                maxWidth: '600px',
+                position: 'relative',
+                marginLeft: 'auto',
+                marginRight: 'auto',
+              }}
+            >
+              Browse our full collection of premium number plates, from 4D 5mm to Ghost plates. Customise to your exact specifications.
+            </p>
+            <Link
+              to="/product"
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '16px 36px',
+                borderRadius: '10px',
+                backgroundColor: c.accentGold,
+                color: c.bgVoid,
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontWeight: 700,
+                fontSize: '1rem',
+                letterSpacing: '-0.02em',
+                textTransform: 'uppercase',
+                textDecoration: 'none',
+                transition: `transform 0.3s ${easeSmooth}, box-shadow 0.3s ${easeSmooth}`,
+                position: 'relative',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = '0 8px 24px rgba(255, 215, 0, 0.25)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            >
+              <ShoppingCart size={18} />
+              SHOP PLATES
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Sticky Bar ── */}
+      <div
+        style={{
+          position: 'fixed',
+          bottom: 0,
+          left: 0,
+          right: 0,
+          backgroundColor: 'rgba(17, 17, 17, 0.95)',
+          backdropFilter: 'blur(20px)',
+          borderTop: `1px solid ${c.borderSubtle}`,
+          padding: isMobile ? '10px 16px' : '12px 24px',
+          zIndex: 100,
+          transform: showStickyBar ? 'translateY(0)' : 'translateY(100%)',
+          transition: `transform 0.4s ${easeSmooth}`,
+        }}
+      >
+        <div
+          style={{
+            maxWidth: '1440px',
+            margin: '0 auto',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: '16px',
+            flexWrap: 'wrap',
+          }}
+        >
+          <div>
+            <span
+              style={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontWeight: 700,
+                fontSize: '0.75rem',
+                letterSpacing: '0.05em',
+                color: c.textMuted,
+                textTransform: 'uppercase',
+                display: 'block',
+              }}
+            >
+              LUXURY PLATE HOLDER SURROUNDS
+            </span>
+            <span
+              style={{
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontWeight: 700,
+                fontSize: '1.25rem',
+                color: c.accentGold,
+              }}
+            >
+              &pound;{totalPrice.toFixed(2)}
+            </span>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                border: `1px solid ${c.borderSubtle}`,
+                borderRadius: '8px',
+                overflow: 'hidden',
+              }}
+            >
+              <button
+                onClick={() => setQuantity((q: number) => Math.max(1, q - 1))}
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: c.textPrimary,
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = c.borderSubtle)}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <Minus size={14} />
+              </button>
+              <span
+                style={{
+                  width: '36px',
+                  textAlign: 'center',
+                  fontFamily: 'Inter, system-ui, sans-serif',
+                  fontWeight: 700,
+                  fontSize: '0.85rem',
+                  color: c.textPrimary,
+                }}
+              >
+                {quantity}
+              </span>
+              <button
+                onClick={() => setQuantity((q: number) => q + 1)}
+                style={{
+                  width: '36px',
+                  height: '36px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  backgroundColor: 'transparent',
+                  border: 'none',
+                  color: c.textPrimary,
+                  cursor: 'pointer',
+                  transition: 'background-color 0.2s ease',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = c.borderSubtle)}
+                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+              >
+                <Plus size={14} />
+              </button>
+            </div>
+
+            <button
+              style={{
+                padding: isMobile ? '10px 20px' : '12px 28px',
+                borderRadius: '10px',
+                backgroundColor: c.accentGold,
+                color: c.bgVoid,
+                fontFamily: 'Inter, system-ui, sans-serif',
+                fontWeight: 700,
+                fontSize: '0.9rem',
+                letterSpacing: '-0.02em',
+                textTransform: 'uppercase',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                transition: `transform 0.3s ${easeSmooth}`,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+              }}
+            >
+              <ShoppingCart size={16} />
+              ORDER NOW
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Pulse animation keyframes */}
+      <style>{`
+        @keyframes pulse-dot {
+          0%, 100% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.5; transform: scale(1.2); }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════
+   GALLERY ARROW
+   ═══════════════════════════════════════════════ */
+
+function GalleryArrow({ direction, onClick }: { direction: 'left' | 'right'; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        position: 'absolute',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        [direction]: '12px',
+        width: '40px',
+        height: '40px',
+        borderRadius: '50%',
+        backgroundColor: 'rgba(5, 4, 1, 0.7)',
+        border: `1px solid ${c.borderSubtle}`,
+        color: c.textPrimary,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        backdropFilter: 'blur(4px)',
+        transition: 'background-color 0.2s ease, border-color 0.2s ease',
+        zIndex: 2,
+      } as React.CSSProperties}
+      onMouseEnter={(e) => {
+        e.currentTarget.style.backgroundColor = 'rgba(5, 4, 1, 0.9)'
+        e.currentTarget.style.borderColor = c.accentGold
+      }}
+      onMouseLeave={(e) => {
+        e.currentTarget.style.backgroundColor = 'rgba(5, 4, 1, 0.7)'
+        e.currentTarget.style.borderColor = c.borderSubtle
+      }}
+    >
+      {direction === 'left' ? (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
+      ) : (
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
+      )}
+    </button>
+  )
+}
+
+/* ═══════════════════════════════════════════════
+   PAYMENT BADGE
+   ═══════════════════════════════════════════════ */
+
+function PaymentBadge({ label }: { label: string }) {
+  return (
+    <div
+      style={{
+        padding: '6px 14px',
+        borderRadius: '6px',
+        backgroundColor: c.bgSurface,
+        border: `1px solid ${c.borderSubtle}`,
+        fontFamily: 'Inter, system-ui, sans-serif',
+        fontSize: '0.7rem',
+        fontWeight: 600,
+        color: c.textMuted,
+        letterSpacing: '0.05em',
+        textTransform: 'uppercase',
+      }}
+    >
+      {label}
+    </div>
+  )
+}
+
+/* ═══════════════════════════════════════════════
+   RELATED PRODUCT CARD
+   ═══════════════════════════════════════════════ */
+
+function RelatedProductCard({
+  product,
+}: {
+  product: { id: number; name: string; price: string; desc: string; image: string }
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  return (
+    <Link
+      to="/product"
+      style={{
+        display: 'block',
+        textDecoration: 'none',
+        backgroundColor: c.bgVoid,
+        borderRadius: '12px',
+        overflow: 'hidden',
+        border: `1px solid ${hovered ? 'rgba(255, 215, 0, 0.3)' : c.borderSubtle}`,
+        transition: `transform 0.3s ${easeSmooth}, box-shadow 0.3s ${easeSmooth}, border-color 0.3s ease`,
+        transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
+        boxShadow: hovered ? '0 12px 32px rgba(0, 0, 0, 0.4)' : 'none',
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+    >
+      <div style={{ aspectRatio: '1/1', overflow: 'hidden' }}>
+        <img
+          src={product.image}
+          alt={product.name}
+          style={{
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            display: 'block',
+            transition: 'transform 0.4s ease',
+            transform: hovered ? 'scale(1.05)' : 'scale(1)',
+          }}
+        />
+      </div>
+      <div style={{ padding: '16px' }}>
+        <h3
+          style={{
+            fontFamily: 'Inter, system-ui, sans-serif',
+            fontWeight: 700,
+            fontSize: '0.85rem',
+            letterSpacing: '-0.02em',
+            color: c.textPrimary,
+            textTransform: 'uppercase',
+            margin: '0 0 4px 0',
+          }}
+        >
+          {product.name}
+        </h3>
+        <p
+          style={{
+            fontFamily: 'Inter, system-ui, sans-serif',
+            fontWeight: 700,
+            fontSize: '1rem',
+            color: c.accentGold,
+            margin: '0 0 8px 0',
+          }}
+        >
+          {product.price}
+        </p>
+        <p
+          style={{
+            fontFamily: 'Inter, system-ui, sans-serif',
+            fontSize: '0.8rem',
+            color: c.textMuted,
+            lineHeight: 1.5,
+            margin: 0,
+          }}
+        >
+          {product.desc}
+        </p>
+      </div>
+    </Link>
+  )
+}

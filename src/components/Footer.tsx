@@ -2,9 +2,11 @@ import { Link } from 'react-router'
 
 const shopLinks = [
   { label: 'Road Legal Plates', to: '/product' },
-  { label: 'Show Plates', to: '/product' },
-  { label: '4D Gel', to: '/product' },
-  { label: '3D Plates', to: '/product' },
+  { label: 'Showplates', to: '/product' },
+  { label: '4D Gel Plates', to: '/product' },
+  { label: 'Plate Holders', to: '/plate-holders' },
+  { label: 'Keyrings', to: '/keyrings' },
+  { label: 'Side Badges', to: '/product' },
 ]
 
 const infoLinks = [
@@ -15,15 +17,18 @@ const infoLinks = [
 ]
 
 const companyLinks = [
-  { label: 'About', to: '/#about' },
-  { label: 'Careers', to: '/contact' },
+  { label: 'About', to: '/about' },
   { label: 'Contact', to: '/contact' },
+  { label: 'Google Reviews', href: 'https://maps.app.goo.gl/P5FN5jQfMAKv4tgy7' },
+  { label: 'Write a Review', href: 'https://search.google.com/local/writereview?placeid=ChIJZaCmAKCbcEgRw_NK6nFc0pc' },
   { label: 'Privacy', to: '/legal' },
 ]
 
 export default function Footer() {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+
   return (
-    <footer style={{ backgroundColor: '#111111', padding: '120px 0 60px' }}>
+    <footer style={{ backgroundColor: '#111111', padding: isMobile ? '60px 0 40px' : '100px 0 60px' }}>
       <div
         style={{
           maxWidth: '1440px',
@@ -33,30 +38,28 @@ export default function Footer() {
       >
         {/* 4-Column Grid */}
         <div
+          className="footer-grid"
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(4, 1fr)',
             gap: '24px',
           }}
-          className="footer-grid"
         >
           {/* Col 1: Logo + tagline */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '16px' }}>
-              <svg width="12" height="16" viewBox="0 0 12 16" fill="none">
-                <path d="M2 2L10 8L2 14" stroke="#ffd700" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+              <img src="/logo.png" alt="PNP" style={{ width: isMobile ? '32px' : '36px', height: isMobile ? '32px' : '36px', borderRadius: '50%', flexShrink: 0 }} />
               <span
                 style={{
                   fontFamily: 'Inter, system-ui, sans-serif',
                   fontWeight: 700,
-                  fontSize: '1.25rem',
-                  letterSpacing: '-2.4px',
+                  fontSize: isMobile ? '0.9rem' : '1.1rem',
+                  letterSpacing: isMobile ? '0.5px' : '-0.5px',
                   color: '#f2f3f4',
                   textTransform: 'uppercase',
+                  whiteSpace: 'nowrap',
                 }}
               >
-                APEX PLATES
+                PUNJABI NUMBER PLATES
               </span>
             </div>
             <p
@@ -68,7 +71,7 @@ export default function Footer() {
                 maxWidth: '280px',
               }}
             >
-              Redefining the standard of automotive identity.
+              Premium number plate specialists. Same day service on all products.
             </p>
           </div>
 
@@ -161,20 +164,39 @@ export default function Footer() {
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {companyLinks.map((link) => (
                 <li key={link.label}>
-                  <Link
-                    to={link.to}
-                    style={{
-                      fontFamily: 'Inter, system-ui, sans-serif',
-                      fontSize: '1rem',
-                      color: '#757575',
-                      textDecoration: 'none',
-                      transition: 'color 0.3s ease',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = '#ffd700')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = '#757575')}
-                  >
-                    {link.label}
-                  </Link>
+                  {'href' in link ? (
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                        fontSize: '1rem',
+                        color: '#757575',
+                        textDecoration: 'none',
+                        transition: 'color 0.3s ease',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = '#ffd700')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = '#757575')}
+                    >
+                      {link.label}
+                    </a>
+                  ) : (
+                    <Link
+                      to={link.to}
+                      style={{
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                        fontSize: '1rem',
+                        color: '#757575',
+                        textDecoration: 'none',
+                        transition: 'color 0.3s ease',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = '#ffd700')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = '#757575')}
+                    >
+                      {link.label}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>
@@ -230,7 +252,7 @@ export default function Footer() {
               color: '#757575',
             }}
           >
-            APEX PLATES 2025
+            PUNJABI NUMBER PLATES 2025
           </p>
         </div>
       </div>

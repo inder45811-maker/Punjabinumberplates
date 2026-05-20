@@ -1,551 +1,603 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import { Link } from 'react-router'
-import { ArrowRight, X, Heart, Share2, ChevronLeft, ChevronRight } from 'lucide-react'
+import { gsap } from 'gsap'
+import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useGSAP } from '@gsap/react'
+import {
+  Camera,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Heart,
+} from 'lucide-react'
 
-/* ──────────────────────────────────────────────
-   COLORS
-   ────────────────────────────────────────────── */
+gsap.registerPlugin(ScrollTrigger)
 
-const C = {
-  bg: '#050401',
-  card: '#111111',
-  text: '#f2f3f4',
-  gold: '#ffd700',
-  muted: '#757575',
-  border: '#222222',
+/* ─────────────────────── design tokens ─────────────────────── */
+const TOKENS = {
+  bgVoid: '#050401',
+  bgSurface: '#111111',
+  textPrimary: '#f2f3f4',
+  textMuted: '#757575',
+  accentGold: '#ffd700',
+  accentGoldDim: '#b8860b',
+  accentGoldGlow: 'rgba(255, 215, 0, 0.15)',
+  borderSubtle: '#222222',
+  successGreen: '#4f8a4f',
+  alertRed: '#d9534f',
 }
 
-/* ──────────────────────────────────────────────
-   DATA
-   ────────────────────────────────────────────── */
+const easeSmooth = 'cubic-bezier(0.23, 1, 0.32, 1)'
 
-const heroSrcSet = [
-  '/pnp-collection-hero.jpg',
+/* ─────────────────────── gallery data ─────────────────────── */
+const TABS = [
+  'ALL',
+  '4D GEL',
+  '3D',
+  'SHOW PLATES',
+  'CARBON',
+  'STICKER PLATES',
+  'SIGNATURE',
+] as const
+type Tab = (typeof TABS)[number]
+
+interface GalleryItem {
+  id: number
+  image: string
+  type: string
+  vehicle: string
+  customer: string
+  likes: number
+  aspect: string
+}
+
+const GALLERY_ITEMS: GalleryItem[] = [
+  { id: 1, image: '/pnp-07.jpg', type: '4D GEL', vehicle: 'BMW M4', customer: 'James R.', likes: 124, aspect: '4/3' },
+  { id: 2, image: '/pnp-05.jpg', type: '4D GEL', vehicle: 'Porsche 911', customer: 'Sophie L.', likes: 98, aspect: '3/4' },
+  { id: 3, image: '/pnp-06.jpg', type: '3D', vehicle: 'Tesla Model 3', customer: 'Alex M.', likes: 156, aspect: '1/1' },
+  { id: 4, image: '/pnp-03.jpg', type: 'SHOW PLATES', vehicle: 'Range Rover', customer: 'Daniel K.', likes: 87, aspect: '16/9' },
+  { id: 5, image: '/pnp-08.jpg', type: 'CARBON', vehicle: 'Audi RS6', customer: 'Emma W.', likes: 203, aspect: '4/3' },
+  { id: 6, image: '/pnp-09.jpg', type: '4D GEL', vehicle: 'Mercedes AMG', customer: 'Oliver H.', likes: 112, aspect: '3/4' },
+  { id: 7, image: '/pnp-10.jpg', type: 'SIGNATURE', vehicle: 'Lamborghini', customer: 'Lucas P.', likes: 245, aspect: '4/3' },
+  { id: 8, image: '/pnp-11.jpg', type: 'STICKER PLATES', vehicle: 'Ford Mustang', customer: 'Mia T.', likes: 76, aspect: '1/1' },
+  { id: 9, image: '/pnp-07.jpg', type: '4D GEL', vehicle: 'BMW M3', customer: 'Ryan G.', likes: 134, aspect: '16/9' },
+  { id: 10, image: '/pnp-06.jpg', type: '3D', vehicle: 'Tesla Model S', customer: 'Zoe B.', likes: 167, aspect: '3/4' },
+  { id: 11, image: '/pnp-08.jpg', type: 'CARBON', vehicle: 'Audi R8', customer: 'Noah S.', likes: 189, aspect: '4/3' },
+  { id: 12, image: '/pnp-10.jpg', type: 'SIGNATURE', vehicle: 'Porsche Cayman', customer: 'Lily J.', likes: 143, aspect: '1/1' },
+]
+
+const HERO_IMAGES = [
   '/pnp-07.jpg',
   '/pnp-05.jpg',
   '/pnp-06.jpg',
   '/pnp-03.jpg',
-]
-
-const stats = [
-  { number: '10+', label: 'PLATE STYLES' },
-  { number: '24H', label: 'SAME DAY DISPATCH' },
-]
-
-const galleryItems = [
-  { id: 1, image: '/pnp-01.jpg', type: 'STANDARD', vehicle: 'Number Plate', customer: 'Standard Plates', likes: 124, aspect: '4/3' },
-  { id: 2, image: '/pnp-02.jpg', type: '2D SHORT', vehicle: 'Short Plate', customer: '2D Short Printed', likes: 98, aspect: '3/4' },
-  { id: 3, image: '/pnp-03.jpg', type: '3D GEL', vehicle: 'Road Legal', customer: '3D Gel Plates', likes: 156, aspect: '1/1' },
-  { id: 4, image: '/pnp-04.jpg', type: '4D 3MM', vehicle: 'Acrylic Plate', customer: '4D 3MM Acrylic', likes: 87, aspect: '16/9' },
-  { id: 5, image: '/pnp-05.jpg', type: '4D GEL', vehicle: 'Road Legal', customer: '4D Gel Plates', likes: 203, aspect: '4/3' },
-  { id: 6, image: '/pnp-06.jpg', type: 'GHOST', vehicle: 'Ghost Plate', customer: 'Ghost Plates', likes: 112, aspect: '3/4' },
-  { id: 7, image: '/pnp-07.jpg', type: '4D 5MM', vehicle: 'Road Legal', customer: '4D 5MM Plates', likes: 245, aspect: '4/3' },
-  { id: 8, image: '/pnp-08.jpg', type: 'RETRO', vehicle: 'Bevelled Plate', customer: 'Retro Bevelled', likes: 76, aspect: '1/1' },
-  { id: 9, image: '/pnp-09.jpg', type: 'HEX', vehicle: 'Hex Plate', customer: 'Hex Plates', likes: 134, aspect: '16/9' },
-  { id: 10, image: '/pnp-10.jpg', type: 'BUNDLE', vehicle: 'Hex Bundle', customer: 'Hex Bundle Deal', likes: 167, aspect: '3/4' },
-  { id: 11, image: '/pnp-11.jpg', type: '4D GEL', vehicle: 'Detail Shot', customer: '4D Gel Detail', likes: 189, aspect: '4/3' },
-  { id: 12, image: '/pnp-12.jpg', type: 'BUNDLE', vehicle: 'Premium Bundle', customer: 'Bundle Detail', likes: 143, aspect: '1/1' },
-]
-
-const lightboxImages = [
-  '/pnp-01.jpg',
-  '/pnp-02.jpg',
-  '/pnp-03.jpg',
-  '/pnp-04.jpg',
-  '/pnp-05.jpg',
-  '/pnp-06.jpg',
-  '/pnp-07.jpg',
   '/pnp-08.jpg',
 ]
 
-/* ──────────────────────────────────────────────
-   MAIN EXPORT
-   ────────────────────────────────────────────── */
+const PLATE_TYPES = [
+  '4D GEL BLACK',
+  '3D PLATE',
+  'SHOW PLATE',
+  'CARBON',
+  'STICKER PLATE',
+  'SIGNATURE',
+]
 
-export default function Gallery() {
-  const [lightboxOpen, setLightboxOpen] = useState(false)
-  const [lightboxIndex, setLightboxIndex] = useState(0)
-  const [heroIndex, setHeroIndex] = useState(0)
+/* ─────────────────────── reusable components ─────────────────────── */
 
-  const openLightbox = useCallback((index: number) => {
-    setLightboxIndex(index)
-    setLightboxOpen(true)
-  }, [])
-
-  const closeLightbox = useCallback(() => {
-    setLightboxOpen(false)
-  }, [])
-
-  const nextLightbox = useCallback(() => {
-    setLightboxIndex((prev) => (prev + 1) % lightboxImages.length)
-  }, [])
-
-  const prevLightbox = useCallback(() => {
-    setLightboxIndex((prev) => (prev - 1 + lightboxImages.length) % lightboxImages.length)
-  }, [])
-
-  useEffect(() => {
-    if (!lightboxOpen) return
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') closeLightbox()
-      if (e.key === 'ArrowRight') nextLightbox()
-      if (e.key === 'ArrowLeft') prevLightbox()
-    }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [lightboxOpen, closeLightbox, nextLightbox, prevLightbox])
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setHeroIndex((prev) => (prev + 1) % heroSrcSet.length)
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [])
-
+function Overline({ text, color = TOKENS.accentGold }: { text: string; color?: string }) {
   return (
-    <div style={{ backgroundColor: C.bg, minHeight: '100vh' }}>
-      <HeroSection heroIndex={heroIndex} />
-      <StatsRow />
-      <GalleryGrid items={galleryItems} onOpenLightbox={openLightbox} />
-      <SubmitSection />
+    <p
+      style={{
+        fontFamily: "'JetBrains Mono', monospace",
+        fontSize: '0.8rem',
+        letterSpacing: '0.2em',
+        color,
+        textTransform: 'uppercase',
+        marginBottom: '16px',
+      }}
+    >
+      {text}
+    </p>
+  )
+}
 
-      {lightboxOpen && (
-        <Lightbox
-          images={lightboxImages}
-          index={lightboxIndex}
-          onClose={closeLightbox}
-          onNext={nextLightbox}
-          onPrev={prevLightbox}
-        />
-      )}
+function Container({ children, style, className }: { children: React.ReactNode; style?: React.CSSProperties; className?: string }) {
+  return (
+    <div
+      className={className}
+      style={{
+        maxWidth: '1440px',
+        margin: '0 auto',
+        padding: '0 24px',
+        ...style,
+      }}
+    >
+      {children}
     </div>
   )
 }
 
-/* ═══════════════════════════════════════════════
-   HERO SECTION
-   ═══════════════════════════════════════════════ */
+/* ─────────────────────── Section 1: Hero ─────────────────────── */
+function GalleryHero() {
+  const isMobile = typeof window !== 'undefined' && window.innerWidth <= 768
+  const sectionRef = useRef<HTMLDivElement>(null)
+  const imagesRef = useRef<(HTMLDivElement | null)[]>([])
+  const textRef = useRef<HTMLDivElement>(null)
+  const chevronRef = useRef<HTMLDivElement>(null)
 
-function HeroSection({ heroIndex }: { heroIndex: number }) {
+  useGSAP(() => {
+    if (!sectionRef.current) return
+
+    // Stagger background images
+    gsap.fromTo(
+      imagesRef.current.filter(Boolean),
+      { opacity: 0, scale: 1.1 },
+      {
+        opacity: 0.4,
+        scale: 1,
+        duration: 1.5,
+        stagger: 0.1,
+        ease: 'expo.out',
+      }
+    )
+
+    // Text entrance
+    if (textRef.current) {
+      gsap.fromTo(
+        textRef.current.children,
+        { opacity: 0, y: 40 },
+        {
+          opacity: 1,
+          y: 0,
+          duration: 1.0,
+          stagger: 0.1,
+          ease: 'expo.out',
+          delay: 0.3,
+        }
+      )
+    }
+
+    // Chevron bounce
+    if (chevronRef.current) {
+      gsap.fromTo(
+        chevronRef.current,
+        { opacity: 0 },
+        { opacity: 1, duration: 0.8, delay: 1.2 }
+      )
+    }
+  }, { scope: sectionRef })
+
   return (
     <section
+      ref={sectionRef}
       style={{
         position: 'relative',
-        height: 'clamp(400px, 60vh, 700px)',
+        minHeight: '100dvh',
         overflow: 'hidden',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        backgroundColor: TOKENS.bgVoid,
       }}
     >
-      {heroSrcSet.map((src, i) => (
-        <div
-          key={src}
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: `url(${src})`,
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            opacity: i === heroIndex ? 1 : 0,
-            transition: 'opacity 1s ease-in-out',
-          }}
-        />
-      ))}
+      {/* Background Images — layered collage */}
+      {HERO_IMAGES.map((src, i) => {
+        const offsets = [
+          { top: '-5%', left: '-5%', width: '45%', height: '50%' },
+          { top: '-8%', right: '-3%', width: '40%', height: '55%' },
+          { top: '30%', left: '-8%', width: '38%', height: '45%' },
+          { bottom: '-5%', right: '5%', width: '42%', height: '50%' },
+          { top: '20%', right: '-10%', width: '35%', height: '60%' },
+        ]
+        return (
+          <div
+            key={i}
+            ref={(el) => { imagesRef.current[i] = el }}
+            style={{
+              position: 'absolute',
+              ...offsets[i],
+              opacity: 0,
+              zIndex: 1,
+            }}
+          >
+            <img
+              src={src}
+              alt=""
+              style={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                borderRadius: '8px',
+              }}
+            />
+          </div>
+        )
+      })}
+
+      {/* Radial gradient overlay */}
       <div
         style={{
           position: 'absolute',
           inset: 0,
-          background: 'linear-gradient(to bottom, rgba(5,4,1,0.6), rgba(5,4,1,0.9))',
+          background: isMobile
+            ? 'radial-gradient(circle at center, rgba(5,4,1,1) 0%, rgba(5,4,1,0.95) 50%, rgba(5,4,1,0.8) 100%)'
+            : 'radial-gradient(circle at center, rgba(5,4,1,0.95) 0%, transparent 70%)',
+          zIndex: 5,
         }}
       />
+
+      {/* Center Content */}
       <div
+        ref={textRef}
         style={{
           position: 'relative',
-          zIndex: 2,
+          zIndex: 10,
           textAlign: 'center',
-          padding: '24px',
           maxWidth: '800px',
+          padding: '0 24px',
         }}
       >
-        <p
-          style={{
-            fontFamily: 'Inter, system-ui, sans-serif',
-            fontSize: '0.8rem',
-            letterSpacing: '0.2em',
-            color: C.gold,
-            textTransform: 'uppercase',
-            marginBottom: '16px',
-          }}
-        >
-          OUR WORK
-        </p>
+        <Overline text="THE COLLECTION" />
         <h1
           style={{
-            fontFamily: 'Inter, system-ui, sans-serif',
+            fontFamily: "'Inter', system-ui, sans-serif",
             fontWeight: 700,
-            fontSize: 'clamp(2.5rem, 8vw, 5rem)',
-            letterSpacing: '-0.05em',
-            lineHeight: 0.95,
-            color: C.text,
+            fontSize: isMobile ? '2.2rem' : 'clamp(2.5rem, 6vw, 6rem)',
+            letterSpacing: isMobile ? '-0.5px' : '-2.4px',
+            lineHeight: isMobile ? 1.0 : 0.9,
+            color: TOKENS.textPrimary,
             textTransform: 'uppercase',
-            margin: '0 0 16px 0',
+            wordBreak: 'keep-all',
           }}
         >
-          THE GALLERY
+          INSTALLED.
+          <br />
+          <span style={{ color: TOKENS.accentGold }}>ADMIRED.</span>
         </h1>
         <p
           style={{
-            fontFamily: 'Inter, system-ui, sans-serif',
+            fontFamily: "'Inter', system-ui, sans-serif",
             fontSize: '1rem',
-            color: C.muted,
-            maxWidth: '480px',
+            color: TOKENS.textMuted,
+            maxWidth: '500px',
+            margin: '24px auto 0',
             lineHeight: 1.6,
-            margin: '0 auto',
           }}
         >
-          Explore our collection of handcrafted number plates. Every plate tells a story.
+          Real plates. Real vehicles. Real craftsmanship.
         </p>
 
-        {/* Dots */}
+        {/* Stats Row */}
         <div
           style={{
             display: 'flex',
             justifyContent: 'center',
-            gap: '8px',
-            marginTop: '32px',
+            gap: isMobile ? '24px' : '48px',
+            marginTop: '48px',
+            flexWrap: 'wrap',
           }}
         >
-          {heroSrcSet.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => {}}
-              style={{
-                width: '8px',
-                height: '8px',
-                borderRadius: '50%',
-                border: 'none',
-                backgroundColor: i === heroIndex ? C.gold : 'rgba(255,255,255,0.3)',
-                cursor: 'pointer',
-                transition: 'background-color 0.3s ease',
-                padding: 0,
-              }}
-            />
+          {[
+            { value: '500+', label: 'INSTALLATIONS' },
+            { value: '50+', label: 'VEHICLE BRANDS' },
+            { value: '5★', label: 'AVERAGE RATING' },
+          ].map((stat) => (
+            <div key={stat.label} style={{ textAlign: 'center' }}>
+              <div
+                style={{
+                  fontFamily: "'Inter', system-ui, sans-serif",
+                  fontWeight: 700,
+                  fontSize: isMobile ? '1.5rem' : '2rem',
+                  color: TOKENS.accentGold,
+                  letterSpacing: '-1px',
+                }}
+              >
+                {stat.value}
+              </div>
+              <div
+                style={{
+                  fontFamily: "'JetBrains Mono', monospace",
+                  fontSize: '0.7rem',
+                  letterSpacing: '0.15em',
+                  color: TOKENS.textMuted,
+                  marginTop: '4px',
+                }}
+              >
+                {stat.label}
+              </div>
+            </div>
           ))}
         </div>
       </div>
-    </section>
-  )
-}
 
-/* ═══════════════════════════════════════════════
-   STATS ROW
-   ═══════════════════════════════════════════════ */
-
-function StatsRow() {
-  return (
-    <section
-      style={{
-        backgroundColor: C.card,
-        padding: '32px 24px',
-        borderBottom: `1px solid ${C.border}`,
-      }}
-    >
+      {/* Scroll Indicator */}
       <div
+        ref={chevronRef}
         style={{
-          maxWidth: '1200px',
-          margin: '0 auto',
-          display: 'flex',
-          justifyContent: 'center',
-          gap: 'clamp(48px, 10vw, 120px)',
-          flexWrap: 'wrap',
+          position: 'absolute',
+          bottom: '32px',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 10,
+          opacity: 0,
+          animation: 'galleryBounce 1.5s ease-in-out infinite',
         }}
       >
-        {stats.map((stat) => (
-          <div key={stat.label} style={{ textAlign: 'center' }}>
-            <div
-              style={{
-                fontFamily: 'Inter, system-ui, sans-serif',
-                fontWeight: 700,
-                fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
-                letterSpacing: '-0.03em',
-                color: C.gold,
-                lineHeight: 1,
-              }}
-            >
-              {stat.number}
-            </div>
-            <div
-              style={{
-                fontFamily: 'Inter, system-ui, sans-serif',
-                fontSize: '0.75rem',
-                letterSpacing: '0.15em',
-                color: C.muted,
-                textTransform: 'uppercase',
-                marginTop: '4px',
-              }}
-            >
-              {stat.label}
-            </div>
-          </div>
-        ))}
+        <ChevronDown size={24} color={TOKENS.accentGold} />
       </div>
+
+      <style>{`
+        @keyframes galleryBounce {
+          0%, 100% { transform: translateX(-50%) translateY(0); }
+          50% { transform: translateX(-50%) translateY(8px); }
+        }
+      `}</style>
     </section>
   )
 }
 
-/* ═══════════════════════════════════════════════
-   GALLERY GRID
-   ═══════════════════════════════════════════════ */
-
-function GalleryGrid({
-  items,
-  onOpenLightbox,
-}: {
-  items: typeof galleryItems
-  onOpenLightbox: (index: number) => void
-}) {
-  const [likedItems, setLikedItems] = useState<Set<number>>(new Set())
-
-  const toggleLike = useCallback((id: number) => {
-    setLikedItems((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) {
-        next.delete(id)
-      } else {
-        next.add(id)
-      }
-      return next
-    })
-  }, [])
-
-  return (
-    <section
-      style={{
-        backgroundColor: C.bg,
-        padding: '80px 24px',
-      }}
-    >
-      <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-        <div
-          style={{
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            marginBottom: '48px',
-            flexWrap: 'wrap',
-            gap: '16px',
-          }}
-        >
-          <h2
-            style={{
-              fontFamily: 'Inter, system-ui, sans-serif',
-              fontWeight: 700,
-              fontSize: 'clamp(1.5rem, 3vw, 2.5rem)',
-              letterSpacing: '-0.05em',
-              color: C.text,
-              textTransform: 'uppercase',
-              lineHeight: 1,
-              margin: 0,
-            }}
-          >
-            PLATE GALLERY
-          </h2>
-          <Link
-            to="/product"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '10px 20px',
-              borderRadius: '9999px',
-              border: `1px solid ${C.muted}`,
-              backgroundColor: 'transparent',
-              color: C.text,
-              fontFamily: 'Inter, system-ui, sans-serif',
-              fontWeight: 600,
-              fontSize: '0.85rem',
-              letterSpacing: '-0.02em',
-              textTransform: 'uppercase',
-              textDecoration: 'none',
-              transition: 'border-color 0.3s ease, color 0.3s ease',
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.borderColor = C.gold
-              e.currentTarget.style.color = C.gold
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = C.muted
-              e.currentTarget.style.color = C.text
-            }}
-          >
-            BUILD YOUR PLATE
-            <ArrowRight size={16} />
-          </Link>
-        </div>
-
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-            gap: '24px',
-          }}
-        >
-          {items.map((item, i) => (
-            <GalleryCard
-              key={item.id}
-              item={item}
-              isLiked={likedItems.has(item.id)}
-              onToggleLike={() => toggleLike(item.id)}
-              onOpenLightbox={() => onOpenLightbox(i % lightboxImages.length)}
-            />
-          ))}
-        </div>
-      </div>
-    </section>
-  )
-}
-
-/* ═══════════════════════════════════════════════
-   GALLERY CARD
-   ═══════════════════════════════════════════════ */
-
-function GalleryCard({
-  item,
-  isLiked,
-  onToggleLike,
-  onOpenLightbox,
-}: {
-  item: (typeof galleryItems)[0]
-  isLiked: boolean
-  onToggleLike: () => void
-  onOpenLightbox: () => void
-}) {
-  const [hovered, setHovered] = useState(false)
-
+/* ─────────────────────── Section 2: Filter Bar ─────────────────────── */
+function FilterBar({ activeTab, onTabChange }: { activeTab: Tab; onTabChange: (t: Tab) => void }) {
   return (
     <div
       style={{
-        backgroundColor: C.card,
-        borderRadius: '8px',
-        overflow: 'hidden',
-        border: `1px solid ${hovered ? 'rgba(255, 215, 0, 0.3)' : C.border}`,
-        transition: 'transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease',
-        transform: hovered ? 'translateY(-4px)' : 'translateY(0)',
-        boxShadow: hovered ? '0 12px 32px rgba(0, 0, 0, 0.4)' : 'none',
-        cursor: 'pointer',
+        position: 'sticky',
+        top: '104px',
+        zIndex: 50,
+        padding: '16px 0',
+        backgroundColor: TOKENS.bgVoid,
+        borderBottom: `1px solid ${TOKENS.borderSubtle}`,
       }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
     >
-      <div
-        style={{
-          width: '100%',
-          aspectRatio: item.aspect,
-          overflow: 'hidden',
-          position: 'relative',
-        }}
-        onClick={onOpenLightbox}
-      >
-        <img
-          src={item.image}
-          alt={`${item.type} — ${item.vehicle}`}
-          width="400"
-          height="300"
-          style={{
-            width: '100%',
-            height: '100%',
-            objectFit: 'cover',
-            display: 'block',
-            transition: 'transform 0.4s ease',
-            transform: hovered ? 'scale(1.05)' : 'scale(1)',
-          }}
-        />
-        <div
-          style={{
-            position: 'absolute',
-            top: '12px',
-            left: '12px',
-            padding: '4px 12px',
-            borderRadius: '4px',
-            backgroundColor: 'rgba(255, 215, 0, 0.9)',
-            color: C.bg,
-            fontFamily: 'Inter, system-ui, sans-serif',
-            fontWeight: 700,
-            fontSize: '0.7rem',
-            letterSpacing: '0.1em',
-            textTransform: 'uppercase',
-          }}
-        >
-          {item.type}
-        </div>
-      </div>
-      <div style={{ padding: '16px' }}>
+      <Container>
         <div
           style={{
             display: 'flex',
-            justifyContent: 'space-between',
             alignItems: 'center',
+            gap: '8px',
+            overflowX: 'auto',
+            scrollbarWidth: 'none',
           }}
         >
-          <div>
-            <h3
+          {TABS.map((tab) => {
+            const isActive = tab === activeTab
+            return (
+              <button
+                key={tab}
+                onClick={() => onTabChange(tab)}
+                style={{
+                  padding: '8px 20px',
+                  borderRadius: '9999px',
+                  fontFamily: "'Inter', system-ui, sans-serif",
+                  fontWeight: 600,
+                  fontSize: '0.8rem',
+                  letterSpacing: '0.05em',
+                  textTransform: 'uppercase',
+                  cursor: 'pointer',
+                  transition: `all 0.3s ${easeSmooth}`,
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  border: isActive
+                    ? 'none'
+                    : `1px solid ${TOKENS.borderSubtle}`,
+                  backgroundColor: isActive
+                    ? TOKENS.accentGold
+                    : 'transparent',
+                  color: isActive ? TOKENS.bgVoid : TOKENS.textMuted,
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.borderColor = TOKENS.accentGold
+                    e.currentTarget.style.color = TOKENS.accentGold
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!isActive) {
+                    e.currentTarget.style.borderColor = TOKENS.borderSubtle
+                    e.currentTarget.style.color = TOKENS.textMuted
+                  }
+                }}
+              >
+                {tab}
+              </button>
+            )
+          })}
+        </div>
+      </Container>
+    </div>
+  )
+}
+
+/* ─────────────────────── Section 3: Masonry Grid ─────────────────────── */
+function MasonryGrid({
+  items,
+  onItemClick,
+}: {
+  items: GalleryItem[]
+  onItemClick: (item: GalleryItem, index: number) => void
+}) {
+  const gridRef = useRef<HTMLDivElement>(null)
+
+  useGSAP(() => {
+    if (!gridRef.current) return
+    const cards = gridRef.current.querySelectorAll('.gallery-card')
+    gsap.fromTo(
+      cards,
+      { opacity: 0, y: 30 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.8,
+        stagger: 0.05,
+        ease: 'expo.out',
+        scrollTrigger: {
+          trigger: gridRef.current,
+          start: 'top 80%',
+        },
+      }
+    )
+  }, { scope: gridRef, dependencies: [items] })
+
+  // Distribute items into 4 columns for masonry effect
+  const columns: GalleryItem[][] = [[], [], [], []]
+  items.forEach((item, i) => {
+    columns[i % 4].push(item)
+  })
+
+  return (
+    <div style={{ backgroundColor: TOKENS.bgVoid, padding: '48px 0' }}>
+      <Container>
+        <div
+          ref={gridRef}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(4, 1fr)',
+            gap: '16px',
+          }}
+          className="masonry-grid"
+        >
+          {items.map((item, idx) => (
+            <GalleryCard
+              key={`${item.id}-${idx}`}
+              item={item}
+              onClick={() => onItemClick(item, idx)}
+            />
+          ))}
+        </div>
+      </Container>
+
+      <style>{`
+        @media (max-width: 1023px) {
+          .masonry-grid { grid-template-columns: repeat(3, 1fr) !important; }
+        }
+        @media (max-width: 767px) {
+          .masonry-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+      `}</style>
+    </div>
+  )
+}
+
+function GalleryCard({
+  item,
+  onClick,
+}: {
+  item: GalleryItem
+  onClick: () => void
+}) {
+  const [hovered, setHovered] = useState(false)
+
+  const aspectPadding =
+    item.aspect === '4/3'
+      ? '75%'
+      : item.aspect === '3/4'
+        ? '133%'
+        : item.aspect === '16/9'
+          ? '56%'
+          : '100%'
+
+  return (
+    <div
+      className="gallery-card"
+      onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        borderRadius: '8px',
+        overflow: 'hidden',
+        cursor: 'pointer',
+        position: 'relative',
+      }}
+    >
+      <div style={{ paddingBottom: aspectPadding, position: 'relative' }}>
+        <img
+          src={item.image}
+          alt={`${item.vehicle} — ${item.type}`}
+          style={{
+            position: 'absolute',
+            inset: 0,
+            width: '100%',
+            height: '100%',
+            objectFit: 'cover',
+            transition: `transform 0.4s ${easeSmooth}`,
+            transform: hovered ? 'scale(1.05)' : 'scale(1)',
+          }}
+        />
+        {/* Hover Overlay */}
+        <div
+          style={{
+            position: 'absolute',
+            inset: 0,
+            background:
+              'linear-gradient(transparent 50%, rgba(5,4,1,0.9) 100%)',
+            opacity: hovered ? 1 : 0,
+            transition: `opacity 0.4s ${easeSmooth}`,
+            display: 'flex',
+            flexDirection: 'column',
+            justifyContent: 'flex-end',
+            padding: '16px',
+          }}
+        >
+          <span
+            style={{
+              display: 'inline-block',
+              backgroundColor: TOKENS.accentGold,
+              color: TOKENS.bgVoid,
+              fontFamily: "'JetBrains Mono', monospace",
+              fontSize: '0.7rem',
+              fontWeight: 600,
+              padding: '4px 12px',
+              borderRadius: '9999px',
+              width: 'fit-content',
+              marginBottom: '8px',
+            }}
+          >
+            {item.type}
+          </span>
+          <h3
+            style={{
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontWeight: 700,
+              fontSize: '1.125rem',
+              color: TOKENS.textPrimary,
+              letterSpacing: '-0.5px',
+              textTransform: 'uppercase',
+              margin: 0,
+            }}
+          >
+            {item.vehicle}
+          </h3>
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              marginTop: '4px',
+            }}
+          >
+            <span
               style={{
-                fontFamily: 'Inter, system-ui, sans-serif',
-                fontWeight: 700,
-                fontSize: '0.85rem',
-                letterSpacing: '-0.02em',
-                color: C.text,
-                textTransform: 'uppercase',
-                margin: '0 0 2px 0',
-              }}
-            >
-              {item.vehicle}
-            </h3>
-            <p
-              style={{
-                fontFamily: 'Inter, system-ui, sans-serif',
-                fontSize: '0.75rem',
-                color: C.muted,
-                margin: 0,
+                fontFamily: "'Inter', system-ui, sans-serif",
+                fontSize: '0.8rem',
+                color: TOKENS.textMuted,
               }}
             >
               {item.customer}
-            </p>
-          </div>
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                onToggleLike()
-              }}
+            </span>
+            <span
               style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '4px',
-                color: isLiked ? C.gold : C.muted,
-                transition: 'color 0.2s ease',
-                padding: '4px',
+                fontFamily: "'Inter', system-ui, sans-serif",
+                fontSize: '0.8rem',
+                color: TOKENS.textMuted,
               }}
             >
-              <Heart
-                size={16}
-                fill={isLiked ? C.gold : 'none'}
-                stroke={isLiked ? C.gold : 'currentColor'}
-              />
-              <span
-                style={{
-                  fontFamily: 'Inter, system-ui, sans-serif',
-                  fontSize: '0.75rem',
-                  fontWeight: 600,
-                }}
-              >
-                {item.likes + (isLiked ? 1 : 0)}
-              </span>
-            </button>
+              <Heart size={12} /> {item.likes}
+            </span>
           </div>
         </div>
       </div>
@@ -553,35 +605,59 @@ function GalleryCard({
   )
 }
 
-/* ═══════════════════════════════════════════════
-   LIGHTBOX
-   ═══════════════════════════════════════════════ */
-
+/* ─────────────────────── Lightbox ─────────────────────── */
 function Lightbox({
-  images,
-  index,
+  items,
+  currentIndex,
   onClose,
-  onNext,
-  onPrev,
+  onNavigate,
 }: {
-  images: string[]
-  index: number
+  items: GalleryItem[]
+  currentIndex: number
   onClose: () => void
-  onNext: () => void
-  onPrev: () => void
+  onNavigate: (dir: 'prev' | 'next') => void
 }) {
+  const overlayRef = useRef<HTMLDivElement>(null)
+  const item = items[currentIndex]
+
+  const handleKeyDown = useCallback(
+    (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+      if (e.key === 'ArrowLeft') onNavigate('prev')
+      if (e.key === 'ArrowRight') onNavigate('next')
+    },
+    [onClose, onNavigate]
+  )
+
+  useEffect(() => {
+    document.addEventListener('keydown', handleKeyDown)
+    document.body.style.overflow = 'hidden'
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = ''
+    }
+  }, [handleKeyDown])
+
+  if (!item) return null
+
   return (
     <div
+      ref={overlayRef}
+      onClick={(e) => {
+        if (e.target === overlayRef.current) onClose()
+      }}
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 9999,
-        backgroundColor: 'rgba(5, 4, 1, 0.95)',
+        backgroundColor: 'rgba(17, 17, 17, 0.95)',
+        backdropFilter: 'blur(20px)',
+        zIndex: 2000,
         display: 'flex',
+        flexDirection: 'column',
         alignItems: 'center',
         justifyContent: 'center',
+        animation: 'lightboxIn 0.3s ease forwards',
       }}
-      onClick={onClose}
     >
       {/* Close button */}
       <button
@@ -592,21 +668,18 @@ function Lightbox({
           right: '24px',
           background: 'none',
           border: 'none',
-          color: C.text,
           cursor: 'pointer',
+          color: TOKENS.textPrimary,
+          zIndex: 2001,
           padding: '8px',
-          zIndex: 10,
         }}
       >
-        <X size={28} />
+        <X size={32} />
       </button>
 
-      {/* Prev button */}
+      {/* Navigation arrows */}
       <button
-        onClick={(e) => {
-          e.stopPropagation()
-          onPrev()
-        }}
+        onClick={() => onNavigate('prev')}
         style={{
           position: 'absolute',
           left: '24px',
@@ -614,21 +687,16 @@ function Lightbox({
           transform: 'translateY(-50%)',
           background: 'none',
           border: 'none',
-          color: C.text,
           cursor: 'pointer',
+          color: TOKENS.textPrimary,
+          zIndex: 2001,
           padding: '8px',
-          zIndex: 10,
         }}
       >
-        <ChevronLeft size={36} />
+        <ChevronLeft size={48} />
       </button>
-
-      {/* Next button */}
       <button
-        onClick={(e) => {
-          e.stopPropagation()
-          onNext()
-        }}
+        onClick={() => onNavigate('next')}
         style={{
           position: 'absolute',
           right: '24px',
@@ -636,122 +704,588 @@ function Lightbox({
           transform: 'translateY(-50%)',
           background: 'none',
           border: 'none',
-          color: C.text,
           cursor: 'pointer',
+          color: TOKENS.textPrimary,
+          zIndex: 2001,
           padding: '8px',
-          zIndex: 10,
         }}
       >
-        <ChevronRight size={36} />
+        <ChevronRight size={48} />
       </button>
 
       {/* Image */}
+      <img
+        src={item.image}
+        alt={item.vehicle}
+        style={{
+          maxHeight: '75vh',
+          maxWidth: '85vw',
+          objectFit: 'contain',
+          borderRadius: '8px',
+          animation: 'lightboxImageIn 0.3s ease forwards',
+        }}
+      />
+
+      {/* Info bar */}
       <div
         style={{
-          maxWidth: '90vw',
-          maxHeight: '85vh',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
+          marginTop: '24px',
+          textAlign: 'center',
         }}
-        onClick={(e) => e.stopPropagation()}
       >
-        <img
-          src={images[index]}
-          alt={`Gallery image ${index + 1}`}
+        <span
           style={{
-            maxWidth: '100%',
-            maxHeight: '80vh',
-            objectFit: 'contain',
-            borderRadius: '4px',
-          }}
-        />
-        <p
-          style={{
-            fontFamily: 'Inter, system-ui, sans-serif',
-            fontSize: '0.8rem',
-            color: C.muted,
-            marginTop: '16px',
+            display: 'inline-block',
+            backgroundColor: TOKENS.accentGold,
+            color: TOKENS.bgVoid,
+            fontFamily: "'JetBrains Mono', monospace",
+            fontSize: '0.75rem',
+            fontWeight: 600,
+            padding: '4px 14px',
+            borderRadius: '9999px',
+            marginBottom: '8px',
           }}
         >
-          {index + 1} / {images.length}
-        </p>
+          {item.type}
+        </span>
+        <h3
+          style={{
+            fontFamily: "'Inter', system-ui, sans-serif",
+            fontWeight: 700,
+            fontSize: '1.25rem',
+            color: TOKENS.textPrimary,
+            textTransform: 'uppercase',
+            margin: '4px 0',
+          }}
+        >
+          {item.vehicle}
+        </h3>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'center',
+            alignItems: 'center',
+            gap: '16px',
+          }}
+        >
+          <span
+            style={{
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: '0.875rem',
+              color: TOKENS.textMuted,
+            }}
+          >
+            {item.customer}
+          </span>
+          <span
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: '0.875rem',
+              color: TOKENS.textMuted,
+            }}
+          >
+            <Heart size={14} /> {item.likes}
+          </span>
+        </div>
       </div>
+
+      <style>{`
+        @keyframes lightboxIn {
+          from { opacity: 0; }
+          to { opacity: 1; }
+        }
+        @keyframes lightboxImageIn {
+          from { opacity: 0; transform: scale(0.9); }
+          to { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
     </div>
   )
 }
 
-/* ═══════════════════════════════════════════════
-   SUBMIT SECTION
-   ═══════════════════════════════════════════════ */
-
+/* ─────────────────────── Section 4: Submit Your Plate ─────────────────────── */
 function SubmitSection() {
+  const sectionRef = useRef<HTMLDivElement>(null)
+  const leftRef = useRef<HTMLDivElement>(null)
+  const rightRef = useRef<HTMLDivElement>(null)
+
+  useGSAP(() => {
+    if (!sectionRef.current) return
+    if (leftRef.current) {
+      gsap.fromTo(
+        leftRef.current,
+        { opacity: 0, x: -30 },
+        {
+          opacity: 1,
+          x: 0,
+          duration: 1.0,
+          ease: 'expo.out',
+          scrollTrigger: { trigger: sectionRef.current, start: 'top 70%' },
+        }
+      )
+    }
+    if (rightRef.current) {
+      gsap.fromTo(
+        rightRef.current,
+        { opacity: 0, x: 30 },
+        {
+          opacity: 1,
+          x: 0,
+          duration: 0.8,
+          ease: 'expo.out',
+          delay: 0.2,
+          scrollTrigger: { trigger: sectionRef.current, start: 'top 70%' },
+        }
+      )
+    }
+  }, { scope: sectionRef })
+
+  const [formData, setFormData] = useState({
+    name: '',
+    vehicle: '',
+    plateType: '',
+    social: '',
+  })
+
+  return (
+    <section
+      ref={sectionRef}
+      style={{
+        backgroundColor: TOKENS.bgSurface,
+        padding: '120px 0',
+      }}
+    >
+      <Container
+        style={{
+          display: 'grid',
+          gridTemplateColumns: '1fr 1fr',
+          gap: '48px',
+          maxWidth: '1200px',
+          alignItems: 'start',
+        }}
+        className="submit-grid"
+      >
+        {/* Left — Text */}
+        <div ref={leftRef} style={{ opacity: 0 }}>
+          <Overline text="JOIN THE GALLERY" />
+          <h2
+            style={{
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontWeight: 700,
+              fontSize: 'clamp(1.75rem, 3vw, 2.5rem)',
+              letterSpacing: '-1.5px',
+              lineHeight: 1,
+              color: TOKENS.textPrimary,
+              textTransform: 'uppercase',
+            }}
+          >
+            SHOW US
+            <br />
+            <span style={{ color: TOKENS.accentGold }}>YOUR BUILD.</span>
+          </h2>
+          <p
+            style={{
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: '1rem',
+              color: TOKENS.textMuted,
+              maxWidth: '480px',
+              lineHeight: 1.6,
+              marginTop: '20px',
+            }}
+          >
+            Had your PNP plate installed? Share it with the community. The best
+            submissions get featured on our homepage and social channels.
+          </p>
+          <p
+            style={{
+              fontFamily: "'Inter', system-ui, sans-serif",
+              fontSize: '1rem',
+              color: TOKENS.accentGold,
+              marginTop: '16px',
+            }}
+          >
+            &#10022; Featured submissions receive a &pound;20 discount on their next
+            order.
+          </p>
+        </div>
+
+        {/* Right — Upload Form */}
+        <div ref={rightRef} style={{ opacity: 0 }}>
+          {/* Upload Zone */}
+          <div
+            style={{
+              border: `2px dashed ${TOKENS.borderSubtle}`,
+              padding: '60px 24px',
+              borderRadius: '8px',
+              textAlign: 'center',
+              transition: `all 0.3s ${easeSmooth}`,
+              cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = TOKENS.accentGold
+              e.currentTarget.style.backgroundColor = TOKENS.accentGoldGlow
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = TOKENS.borderSubtle
+              e.currentTarget.style.backgroundColor = 'transparent'
+            }}
+          >
+            <Camera
+              size={40}
+              color={TOKENS.textMuted}
+              style={{ margin: '0 auto 12px' }}
+            />
+            <h3
+              style={{
+                fontFamily: "'Inter', system-ui, sans-serif",
+                fontWeight: 700,
+                fontSize: '1.125rem',
+                color: TOKENS.textMuted,
+                textTransform: 'uppercase',
+                letterSpacing: '-0.5px',
+              }}
+            >
+              DRAG &amp; DROP YOUR PHOTO
+            </h3>
+            <p
+              style={{
+                fontFamily: "'Inter', system-ui, sans-serif",
+                fontSize: '0.8rem',
+                color: TOKENS.textMuted,
+                marginTop: '8px',
+              }}
+            >
+              Or click to browse — JPG, PNG up to 10MB
+            </p>
+          </div>
+
+          {/* Fields */}
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '16px',
+              marginTop: '24px',
+            }}
+          >
+            <FormField
+              label="YOUR NAME"
+              placeholder="e.g. James Smith"
+              value={formData.name}
+              onChange={(v) => setFormData((p) => ({ ...p, name: v }))}
+            />
+            <FormField
+              label="VEHICLE MODEL"
+              placeholder="e.g. BMW M4"
+              value={formData.vehicle}
+              onChange={(v) => setFormData((p) => ({ ...p, vehicle: v }))}
+            />
+            <FormSelect
+              label="PLATE TYPE"
+              value={formData.plateType}
+              onChange={(v) => setFormData((p) => ({ ...p, plateType: v }))}
+              options={PLATE_TYPES}
+            />
+            <FormField
+              label="SOCIAL HANDLE (OPTIONAL)"
+              placeholder="@instagram"
+              value={formData.social}
+              onChange={(v) => setFormData((p) => ({ ...p, social: v }))}
+            />
+
+            <button
+              style={{
+                width: '100%',
+                padding: '16px 32px',
+                borderRadius: '9999px',
+                backgroundColor: TOKENS.accentGold,
+                color: TOKENS.bgVoid,
+                fontFamily: "'Inter', system-ui, sans-serif",
+                fontWeight: 700,
+                fontSize: '0.875rem',
+                letterSpacing: '-0.72px',
+                textTransform: 'uppercase',
+                border: 'none',
+                cursor: 'pointer',
+                transition: `all 0.3s ${easeSmooth}`,
+                marginTop: '8px',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'translateY(-2px)'
+                e.currentTarget.style.boxShadow = `0 0 40px ${TOKENS.accentGoldGlow}`
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'translateY(0)'
+                e.currentTarget.style.boxShadow = 'none'
+              }}
+            >
+              SUBMIT TO GALLERY
+            </button>
+          </div>
+        </div>
+      </Container>
+
+      <style>{`
+        @media (max-width: 767px) {
+          .submit-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+    </section>
+  )
+}
+
+function FormField({
+  label,
+  placeholder,
+  value,
+  onChange,
+}: {
+  label: string
+  placeholder: string
+  value: string
+  onChange: (v: string) => void
+}) {
+  return (
+    <div>
+      <label
+        style={{
+          display: 'block',
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: '0.7rem',
+          letterSpacing: '0.15em',
+          color: TOKENS.textMuted,
+          textTransform: 'uppercase',
+          marginBottom: '6px',
+        }}
+      >
+        {label}
+      </label>
+      <input
+        type="text"
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          width: '100%',
+          padding: '12px 16px',
+          backgroundColor: TOKENS.bgVoid,
+          border: `1px solid ${TOKENS.borderSubtle}`,
+          borderRadius: '6px',
+          color: TOKENS.textPrimary,
+          fontFamily: "'Inter', system-ui, sans-serif",
+          fontSize: '0.875rem',
+          outline: 'none',
+          transition: `border-color 0.3s ${easeSmooth}`,
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = TOKENS.accentGold
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = TOKENS.borderSubtle
+        }}
+      />
+    </div>
+  )
+}
+
+function FormSelect({
+  label,
+  value,
+  onChange,
+  options,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  options: string[]
+}) {
+  return (
+    <div>
+      <label
+        style={{
+          display: 'block',
+          fontFamily: "'JetBrains Mono', monospace",
+          fontSize: '0.7rem',
+          letterSpacing: '0.15em',
+          color: TOKENS.textMuted,
+          textTransform: 'uppercase',
+          marginBottom: '6px',
+        }}
+      >
+        {label}
+      </label>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          width: '100%',
+          padding: '12px 16px',
+          backgroundColor: TOKENS.bgVoid,
+          border: `1px solid ${TOKENS.borderSubtle}`,
+          borderRadius: '6px',
+          color: TOKENS.textPrimary,
+          fontFamily: "'Inter', system-ui, sans-serif",
+          fontSize: '0.875rem',
+          outline: 'none',
+          cursor: 'pointer',
+          transition: `border-color 0.3s ${easeSmooth}`,
+        }}
+        onFocus={(e) => {
+          e.currentTarget.style.borderColor = TOKENS.accentGold
+        }}
+        onBlur={(e) => {
+          e.currentTarget.style.borderColor = TOKENS.borderSubtle
+        }}
+      >
+        <option value="" disabled>
+          Select plate type
+        </option>
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
+/* ─────────────────────── Section 5: CTA Banner ─────────────────────── */
+function CTABanner() {
+  const sectionRef = useRef<HTMLDivElement>(null)
+
+  useGSAP(() => {
+    if (!sectionRef.current) return
+    gsap.fromTo(
+      sectionRef.current.children,
+      { opacity: 0, y: 40 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 1.0,
+        ease: 'expo.out',
+        stagger: 0.1,
+        scrollTrigger: { trigger: sectionRef.current, start: 'top 75%' },
+      }
+    )
+  }, { scope: sectionRef })
+
   return (
     <section
       style={{
-        backgroundColor: C.card,
-        padding: '80px 24px',
+        backgroundColor: TOKENS.bgVoid,
+        padding: '100px 24px',
         textAlign: 'center',
       }}
     >
-      <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-        <h2
+      <div ref={sectionRef} style={{ maxWidth: '600px', margin: '0 auto' }}>
+        <h1
           style={{
-            fontFamily: 'Inter, system-ui, sans-serif',
+            fontFamily: "'Inter', system-ui, sans-serif",
             fontWeight: 700,
-            fontSize: 'clamp(1.5rem, 4vw, 2.5rem)',
-            letterSpacing: '-0.05em',
-            color: C.text,
+            fontSize: 'clamp(1.75rem, 4vw, 3rem)',
+            letterSpacing: '-2.4px',
+            lineHeight: 0.9,
+            color: TOKENS.textPrimary,
             textTransform: 'uppercase',
-            lineHeight: 1,
-            marginBottom: '16px',
           }}
         >
-          SHARE YOUR PLATE
-        </h2>
+          READY FOR YOUR CLOSE-UP?
+        </h1>
         <p
           style={{
-            fontFamily: 'Inter, system-ui, sans-serif',
+            fontFamily: "'Inter', system-ui, sans-serif",
             fontSize: '1rem',
-            color: C.muted,
+            color: TOKENS.textMuted,
+            marginTop: '16px',
             lineHeight: 1.6,
-            marginBottom: '32px',
           }}
         >
-          Had your Punjabi Number Plate installed? Send us a photo and we&apos;ll feature it in our gallery.
+          Build your plate now and it could be our next featured installation.
         </p>
-        <a
-          href="mailto:info@punjabinumberplates.co.uk?subject=Gallery Submission"
+        <Link
+          to="/product"
           style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '14px 32px',
+            display: 'inline-block',
+            marginTop: '32px',
+            padding: '16px 32px',
             borderRadius: '9999px',
-            border: `1px solid ${C.muted}`,
-            backgroundColor: 'transparent',
-            color: C.text,
-            fontFamily: 'Inter, system-ui, sans-serif',
+            backgroundColor: TOKENS.accentGold,
+            color: TOKENS.bgVoid,
+            fontFamily: "'Inter', system-ui, sans-serif",
             fontWeight: 700,
-            fontSize: '0.9rem',
-            letterSpacing: '-0.02em',
+            fontSize: '0.875rem',
+            letterSpacing: '-0.72px',
             textTransform: 'uppercase',
             textDecoration: 'none',
-            transition: 'border-color 0.3s ease, color 0.3s ease',
+            transition: `all 0.3s ${easeSmooth}`,
           }}
           onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = C.gold
-            e.currentTarget.style.color = C.gold
+            e.currentTarget.style.transform = 'translateY(-2px)'
+            e.currentTarget.style.boxShadow = `0 0 40px ${TOKENS.accentGoldGlow}`
           }}
           onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = C.muted
-            e.currentTarget.style.color = C.text
+            e.currentTarget.style.transform = 'translateY(0)'
+            e.currentTarget.style.boxShadow = 'none'
           }}
         >
-          <Share2 size={16} />
-          SUBMIT YOUR PHOTO
-        </a>
+          BUILD YOUR PLATE
+        </Link>
       </div>
     </section>
+  )
+}
+
+/* ─────────────────────── Main Gallery Page ─────────────────────── */
+export default function Gallery() {
+  const [activeTab, setActiveTab] = useState<Tab>('ALL')
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
+
+  const filteredItems =
+    activeTab === 'ALL'
+      ? GALLERY_ITEMS
+      : GALLERY_ITEMS.filter((item) => {
+          if (activeTab === '4D GEL') return item.type === '4D GEL'
+          if (activeTab === '3D') return item.type === '3D'
+          if (activeTab === 'SHOW PLATES') return item.type === 'SHOW PLATES'
+          if (activeTab === 'CARBON') return item.type === 'CARBON'
+          if (activeTab === 'STICKER PLATES') return item.type === 'STICKER PLATES'
+          if (activeTab === 'SIGNATURE') return item.type === 'SIGNATURE'
+          return true
+        })
+
+  const openLightbox = (_item: GalleryItem, index: number) => {
+    setLightboxIndex(index)
+    setLightboxOpen(true)
+  }
+
+  const navigateLightbox = (dir: 'prev' | 'next') => {
+    setLightboxIndex((prev) => {
+      if (dir === 'prev') return prev === 0 ? filteredItems.length - 1 : prev - 1
+      return prev === filteredItems.length - 1 ? 0 : prev + 1
+    })
+  }
+
+  return (
+    <div style={{ backgroundColor: TOKENS.bgVoid }}>
+      <GalleryHero />
+      <FilterBar activeTab={activeTab} onTabChange={setActiveTab} />
+      <MasonryGrid items={filteredItems} onItemClick={openLightbox} />
+      <SubmitSection />
+      <CTABanner />
+
+      {lightboxOpen && (
+        <Lightbox
+          items={filteredItems}
+          currentIndex={lightboxIndex}
+          onClose={() => setLightboxOpen(false)}
+          onNavigate={navigateLightbox}
+        />
+      )}
+    </div>
   )
 }
