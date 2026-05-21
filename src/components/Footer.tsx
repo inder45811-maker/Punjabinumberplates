@@ -4,7 +4,8 @@ const shopLinks = [
   { label: 'Road Legal Plates', to: '/product' },
   { label: 'Showplates', to: '/product' },
   { label: '4D Gel Plates', to: '/product' },
-  { label: 'Plate Holders', to: '/product' },
+  { label: 'Plate Holders', to: '/plate-holders' },
+  { label: 'Keyrings', to: '/keyrings' },
   { label: 'Side Badges', to: '/product' },
 ]
 
@@ -18,6 +19,8 @@ const infoLinks = [
 const companyLinks = [
   { label: 'About', to: '/about' },
   { label: 'Contact', to: '/contact' },
+  { label: 'Google Reviews', href: 'https://maps.app.goo.gl/P5FN5jQfMAKv4tgy7' },
+  { label: 'Write a Review', href: 'https://search.google.com/local/writereview?placeid=ChIJZaCmAKCbcEgRw_NK6nFc0pc' },
   { label: 'Privacy', to: '/legal' },
 ]
 
@@ -161,20 +164,39 @@ export default function Footer() {
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {companyLinks.map((link) => (
                 <li key={link.label}>
-                  <Link
-                    to={link.to}
-                    style={{
-                      fontFamily: 'Inter, system-ui, sans-serif',
-                      fontSize: '1rem',
-                      color: '#757575',
-                      textDecoration: 'none',
-                      transition: 'color 0.3s ease',
-                    }}
-                    onMouseEnter={(e) => (e.currentTarget.style.color = '#ffd700')}
-                    onMouseLeave={(e) => (e.currentTarget.style.color = '#757575')}
-                  >
-                    {link.label}
-                  </Link>
+                  {'href' in link ? (
+                    <a
+                      href={link.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                        fontSize: '1rem',
+                        color: '#757575',
+                        textDecoration: 'none',
+                        transition: 'color 0.3s ease',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = '#ffd700')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = '#757575')}
+                    >
+                      {link.label}
+                    </a>
+                  ) : (
+                    <Link
+                      to={link.to}
+                      style={{
+                        fontFamily: 'Inter, system-ui, sans-serif',
+                        fontSize: '1rem',
+                        color: '#757575',
+                        textDecoration: 'none',
+                        transition: 'color 0.3s ease',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.color = '#ffd700')}
+                      onMouseLeave={(e) => (e.currentTarget.style.color = '#757575')}
+                    >
+                      {link.label}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>

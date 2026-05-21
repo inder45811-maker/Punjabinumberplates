@@ -6,6 +6,8 @@ import Marquee from 'react-fast-marquee'
 const navLinks = [
   { label: 'HOME', to: '/' },
   { label: 'SHOP', to: '/product' },
+  { label: 'HOLDERS', to: '/plate-holders' },
+  { label: 'KEYRINGS', to: '/keyrings' },
   { label: 'GALLERY', to: '/gallery' },
   { label: 'ABOUT', to: '/about' },
   { label: 'CONTACT', to: '/contact' },

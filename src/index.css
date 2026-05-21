@@ -102,7 +102,8 @@
 
 /* Responsive grid layouts */
 .collection-grid {
-  grid-template-columns: 55% 45%;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 32px;
 }
 .gallery-grid {
   grid-template-columns: repeat(4, 1fr);
@@ -120,6 +121,7 @@
 @media (max-width: 1024px) {
   .collection-grid {
     grid-template-columns: 1fr;
+    gap: 32px;
   }
   .gallery-grid {
     grid-template-columns: repeat(2, 1fr);
@@ -151,6 +153,7 @@
   }
   .collection-grid {
     grid-template-columns: 1fr;
+    gap: 24px;
   }
   .motorpass-grid {
     grid-template-columns: 1fr;

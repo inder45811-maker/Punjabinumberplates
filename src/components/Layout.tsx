@@ -4,6 +4,7 @@ import { gsap } from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Navbar from './Navbar'
 import Footer from './Footer'
+import WhatsAppChat from './WhatsAppChat'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -34,6 +35,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         {children}
       </div>
       <Footer />
+      <WhatsAppChat />
     </>
   )
 }
