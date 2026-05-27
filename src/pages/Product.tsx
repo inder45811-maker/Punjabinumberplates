@@ -5,6 +5,8 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import PlatePreview from '../components/PlatePreview3D'
 import type { PlateStyle } from '../components/PlatePreview3D'
+import { useCart } from '../context/CartContext'
+import { PLATE_VARIANTS, buildPlateAttributes } from '../lib/variantMap'
 import {
   Star,
   Facebook,
@@ -42,6 +44,15 @@ const c = {
 
 const easeSmooth = 'cubic-bezier(0.23, 1, 0.32, 1)'
 
+/* ─── card style helper ─── */
+const cardStyle = {
+  backgroundColor: '#0d0d0d',
+  border: '1px solid #1e1e1e',
+  borderRadius: '10px',
+  padding: '20px',
+  marginBottom: '16px',
+}
+
 /* ─── gallery images ─── */
 const galleryImages = [
   '/pnp-07.jpg',
@@ -62,11 +73,11 @@ const relatedProducts = [
 
 /* ─── gallery images for teaser ─── */
 const galleryTeaserImages = [
-  { src: '/pnp-07.jpg', label: '4D 5MM GEL', aspect: '4/3' },
+  { src: '/pnp-07.jpg', label: '4D 5MM GEL', aspect: '3/4' },
   { src: '/pnp-05.jpg', label: '4D GEL PLATE', aspect: '3/4' },
-  { src: '/pnp-06.jpg', label: 'GHOST PLATE', aspect: '4/3' },
+  { src: '/pnp-06.jpg', label: 'GHOST PLATE', aspect: '3/4' },
   { src: '/pnp-03.jpg', label: '3D GEL DOMED', aspect: '3/4' },
-  { src: '/pnp-08.jpg', label: 'CUSTOM INSTALL', aspect: '4/3' },
+  { src: '/pnp-08.jpg', label: 'CUSTOM INSTALL', aspect: '3/4' },
   { src: '/pnp-09.jpg', label: 'PREMIUM FINISH', aspect: '3/4' },
 ]
 
@@ -98,6 +109,7 @@ export default function Product() {
   const [notes, setNotes] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [showStickyBar, setShowStickyBar] = useState(false)
+  const { addToCart, openCart, setPendingDocuments } = useCart()
   const [activeTab, setActiveTab] = useState<'info' | 'specs' | 'delivery'>('info')
   const [proofOfId, setProofOfId] = useState<File | null>(null)
   const [proofOfEntitlement, setProofOfEntitlement] = useState<File | null>(null)
@@ -123,6 +135,20 @@ export default function Product() {
     const y = ((e.clientY - rect.top) / rect.height) * 100
     setZoomPos({ x, y })
   }, [])
+
+  /* ─── add to cart ─── */
+  const handleAddToCart = useCallback(async () => {
+    const variantId = PLATE_VARIANTS[plateStyle]
+    if (!variantId) {
+      alert('This product variant is not yet configured in Shopify. Please contact support.')
+      return
+    }
+    await addToCart({
+      merchandiseId: variantId,
+      quantity,
+      attributes: buildPlateAttributes(regInput, plateConfig, plateType, plateStyle, notes),
+    })
+  }, [addToCart, plateStyle, plateConfig, plateType, quantity, regInput, notes])
 
   /* ─── refs ─── */
   const containerRef = useRef<HTMLDivElement>(null)
@@ -258,16 +284,15 @@ export default function Product() {
         }}
       >
         <div
-          className="collection-grid"
-          style={{ display: 'grid', gap: '48px', paddingTop: '48px', paddingBottom: '80px' }}
+          style={{ display: 'grid', gridTemplateColumns: '1fr', gap: isMobile ? '24px' : '40px', paddingTop: '48px', paddingBottom: '80px' }}
         >
-          {/* ─── Left Column: Gallery ─── */}
-          <div>
+          {/* ─── Gallery ─── */}
+          <div style={{ minWidth: 0, maxWidth: '900px', margin: '0 auto', width: '100%' }}>
             {/* Main Image */}
             <div
               style={{
-                aspectRatio: isMobile ? '4/3' : '1/1',
-                maxHeight: isMobile ? '280px' : 'none',
+                aspectRatio: isMobile ? '4/3' : '16/10',
+                maxHeight: isMobile ? '280px' : '520px',
                 borderRadius: '8px',
                 overflow: 'hidden',
                 position: 'relative',
@@ -294,7 +319,20 @@ export default function Product() {
             </div>
 
             {/* Thumbnail Strip */}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: '8px',
+                marginTop: '12px',
+                overflowX: 'auto',
+                scrollSnapType: 'x mandatory',
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                paddingBottom: '8px',
+              }}
+              className="hide-scrollbar"
+            >
               {galleryImages.map((src, i) => (
                 <button
                   key={i}
@@ -309,6 +347,7 @@ export default function Product() {
                     cursor: 'pointer',
                     background: 'none',
                     flexShrink: 0,
+                    scrollSnapAlign: 'start',
                     transition: `border-color 0.3s ${easeSmooth}`,
                   }}
                 >
@@ -322,8 +361,8 @@ export default function Product() {
             </div>
           </div>
 
-          {/* ─── Right Column: Product Form ─── */}
-          <div style={{ position: 'sticky', top: '104px', alignSelf: 'start' }}>
+          {/* ─── Product Form ─── */}
+          <div style={{ minWidth: 0, maxWidth: '800px', margin: '0 auto', width: '100%' }}>
             {/* Overline */}
             <p
               style={{
@@ -386,10 +425,8 @@ export default function Product() {
               </span>
             </div>
 
-            <div style={{ height: '1px', backgroundColor: c.borderSubtle, margin: '24px 0' }} />
-
-            {/* Registration Input */}
-            <div style={{ marginBottom: '20px' }}>
+            {/* ── Card: Registration + Preview ── */}
+            <div style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <label
                   style={{
@@ -455,8 +492,8 @@ export default function Product() {
               </p>
             </div>
 
-            {/* Plate Configuration */}
-            <div style={{ marginBottom: '20px' }}>
+            {/* ── Card: Plate Configuration ── */}
+            <div style={cardStyle}>
               <label
                 style={{
                   fontFamily: 'Inter, system-ui, sans-serif',
@@ -533,8 +570,8 @@ export default function Product() {
               </div>
             </div>
 
-            {/* Plate Type */}
-            <div style={{ marginBottom: '20px' }}>
+            {/* ── Card: Plate Type + Documents ── */}
+            <div style={cardStyle}>
               <label
                 style={{
                   fontFamily: 'Inter, system-ui, sans-serif',
@@ -698,7 +735,13 @@ export default function Product() {
                       <input
                         type="file"
                         accept=".jpg,.jpeg,.png,.pdf"
-                        onChange={(e) => setProofOfId(e.target.files?.[0] || null)}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null
+                          setProofOfId(file)
+                          setPendingDocuments(
+                            [file, proofOfEntitlement].filter((f): f is File => f !== null)
+                          )
+                        }}
                         style={{ display: 'none' }}
                       />
                       {proofOfId ? (
@@ -756,7 +799,13 @@ export default function Product() {
                       <input
                         type="file"
                         accept=".jpg,.jpeg,.png,.pdf"
-                        onChange={(e) => setProofOfEntitlement(e.target.files?.[0] || null)}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null
+                          setProofOfEntitlement(file)
+                          setPendingDocuments(
+                            [proofOfId, file].filter((f): f is File => f !== null)
+                          )
+                        }}
                         style={{ display: 'none' }}
                       />
                       {proofOfEntitlement ? (
@@ -783,8 +832,8 @@ export default function Product() {
               )}
             </div>
 
-            {/* Plate Style */}
-            <div style={{ marginBottom: '20px' }}>
+            {/* ── Card: Plate Style ── */}
+            <div style={cardStyle}>
               <label
                 style={{
                   fontFamily: 'Inter, system-ui, sans-serif',
@@ -846,8 +895,8 @@ export default function Product() {
               </div>
             </div>
 
-            {/* Notes */}
-            <div style={{ marginBottom: '20px' }}>
+            {/* ── Card: Notes ── */}
+            <div style={cardStyle}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                 <label
                   style={{
@@ -900,8 +949,8 @@ export default function Product() {
               />
             </div>
 
-            {/* Quantity */}
-            <div style={{ marginBottom: '20px' }}>
+            {/* ── Card: Quantity + Payment ── */}
+            <div style={cardStyle}>
               <label
                 style={{
                   fontFamily: 'Inter, system-ui, sans-serif',
@@ -974,8 +1023,8 @@ export default function Product() {
               </div>
             </div>
 
-            {/* Payment Options */}
-            <div style={{ marginBottom: '20px' }}>
+            {/* ── Card: Payment Options ── */}
+            <div style={cardStyle}>
               <label
                 style={{
                   fontFamily: 'Inter, system-ui, sans-serif',
@@ -1020,8 +1069,10 @@ export default function Product() {
               </div>
             </div>
 
-            {/* Action Buttons */}
+            {/* ── Card: Action Buttons ── */}
+            <div style={{ ...cardStyle, display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <button
+              onClick={handleAddToCart}
               style={{
                 width: '100%',
                 padding: '16px 32px',
@@ -1046,10 +1097,11 @@ export default function Product() {
                 e.currentTarget.style.color = c.textPrimary
               }}
             >
-              ADD TO REG BUILDER
+              ADD TO CART
             </button>
 
             <button
+              onClick={openCart}
               style={{
                 width: '100%',
                 padding: '16px 32px',
@@ -1075,8 +1127,9 @@ export default function Product() {
                 e.currentTarget.style.boxShadow = 'none'
               }}
             >
-              PROCEED TO CHECKOUT
+              VIEW CART
             </button>
+            </div>
 
             {/* Pickup Info */}
             <div style={{ marginTop: '16px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
@@ -1509,8 +1562,10 @@ export default function Product() {
                   <p style={{ fontSize: '0.8rem', color: c.textMuted, marginBottom: '12px', lineHeight: 1.5 }}>
                     {product.desc}
                   </p>
-                  <button
+                  <Link
+                    to="/product"
                     style={{
+                      display: 'block',
                       width: '100%',
                       padding: '10px 20px',
                       borderRadius: '9999px',
@@ -1520,6 +1575,8 @@ export default function Product() {
                       fontWeight: 700,
                       fontSize: '0.75rem',
                       textTransform: 'uppercase',
+                      textDecoration: 'none',
+                      textAlign: 'center',
                       cursor: 'pointer',
                       transition: `border-color 0.3s ${easeSmooth}, color 0.3s ${easeSmooth}`,
                     }}
@@ -1532,8 +1589,8 @@ export default function Product() {
                       e.currentTarget.style.color = c.textPrimary
                     }}
                   >
-                    ADD TO REG BUILDER
-                  </button>
+                    VIEW PRODUCT
+                  </Link>
                 </div>
               </div>
             ))}
@@ -1938,6 +1995,7 @@ export default function Product() {
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
+                onClick={handleAddToCart}
                 style={{
                   padding: '12px 24px',
                   borderRadius: '9999px',
@@ -1959,10 +2017,10 @@ export default function Product() {
                   e.currentTarget.style.color = c.textPrimary
                 }}
               >
-                ADD TO REG BUILDER
+                ADD TO CART
               </button>
-              <Link
-                to="/checkout"
+              <button
+                onClick={openCart}
                 style={{
                   padding: '12px 24px',
                   borderRadius: '9999px',
@@ -1987,8 +2045,8 @@ export default function Product() {
                 }}
               >
                 <ShoppingCart size={14} />
-                BUY IT NOW
-              </Link>
+                VIEW CART
+              </button>
             </div>
           </div>
         </div>
