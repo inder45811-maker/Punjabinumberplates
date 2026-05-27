@@ -304,17 +304,25 @@ export default function Checkout() {
   const handlePlaceOrder = async () => {
     if (!step3Valid()) return
     setIsSubmitting(true)
+    setErrors((prev) => {
+      const copy = { ...prev }
+      delete copy.submit
+      return copy
+    })
 
     try {
       // 1. Upload each file to Cloudinary
       const uploadResults = await Promise.all(
         uploadedFiles.map(async (file) => {
           const base64 = await fileToBase64(file)
+          const controller = new AbortController()
+          const timeout = setTimeout(() => controller.abort(), 30_000)
           const res = await fetch('/api/upload-document', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ fileName: file.name, fileType: file.type, fileData: base64 }),
-          })
+            signal: controller.signal,
+          }).finally(() => clearTimeout(timeout))
           if (!res.ok) {
             const { error } = await res.json()
             throw new Error(error || 'Upload failed')
@@ -359,7 +367,9 @@ export default function Checkout() {
       })
 
       if (!notifyRes.ok) {
-        console.error('Notification email failed (non-critical)')
+        notifyRes.text().then((body) => {
+          console.error('Notification email failed (non-critical):', body)
+        }).catch(() => {})
       }
 
       setOrderNumber(orderRef)
