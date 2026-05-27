@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
@@ -16,6 +16,8 @@ import {
   Instagram,
   Facebook,
 } from 'lucide-react'
+import { useCart } from '../context/CartContext'
+import { cartAttributesUpdate } from '../lib/shopify'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -95,6 +97,15 @@ function getConfigPrice(config: PlateConfig): number {
   return 34.99
 }
 
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve((reader.result as string).split(',')[1])
+    reader.onerror = reject
+    reader.readAsDataURL(file)
+  })
+}
+
 function formatCardNumber(v: string): string {
   return v
     .replace(/\s/g, '')
@@ -109,6 +120,7 @@ function formatCardNumber(v: string): string {
 /* ------------------------------------------------------------------ */
 export default function Checkout() {
   const navigate = useNavigate()
+  const { cart, pendingDocuments } = useCart()
   const containerRef = useRef<HTMLDivElement>(null)
 
   /* -- Step state -- */
@@ -133,7 +145,14 @@ export default function Checkout() {
   })
   const [deliveryMethod, setDeliveryMethod] =
     useState<DeliveryMethod>('standard')
-  const [uploadedFiles, setUploadedFiles] = useState<string[]>([])
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
+
+  useEffect(() => {
+    if (pendingDocuments.length > 0 && uploadedFiles.length === 0) {
+      setUploadedFiles(pendingDocuments)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   /* -- Step 3 state -- */
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card')
@@ -282,22 +301,81 @@ export default function Checkout() {
   ])
 
   /* -- Submit order -- */
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (!step3Valid()) return
     setIsSubmitting(true)
-    setTimeout(() => {
-      setIsSubmitting(false)
-      setOrderNumber(
-        `APX-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 999)).padStart(3, '0')}`
+
+    try {
+      // 1. Upload each file to Cloudinary
+      const uploadResults = await Promise.all(
+        uploadedFiles.map(async (file) => {
+          const base64 = await fileToBase64(file)
+          const res = await fetch('/api/upload-document', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ fileName: file.name, fileType: file.type, fileData: base64 }),
+          })
+          if (!res.ok) {
+            const { error } = await res.json()
+            throw new Error(error || 'Upload failed')
+          }
+          return (await res.json()) as { url: string; publicId: string }
+        })
       )
+
+      // 2. Stamp URLs onto the Shopify cart (non-blocking on failure)
+      if (cart?.id && uploadResults.length > 0) {
+        const attrs = uploadResults.map((r, i) => ({
+          key: `document_${i + 1}_url`,
+          value: r.url,
+        }))
+        try {
+          await cartAttributesUpdate(cart.id, attrs)
+        } catch (err) {
+          console.error('Cart attributes update failed (non-critical):', err)
+        }
+      }
+
+      // 3. Send notification email to shop owner
+      const orderRef = `APX-${new Date().getFullYear()}-${String(
+        Math.floor(Math.random() * 999)
+      ).padStart(3, '0')}`
+
+      const notifyRes = await fetch('/api/notify-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderRef,
+          customerName: customer.fullName,
+          phone: customer.phone,
+          plateText: registration,
+          deliveryMethod,
+          documents: uploadResults.map((r, i) => ({
+            label: `Document ${i + 1}`,
+            fileName: uploadedFiles[i].name,
+            url: r.url,
+          })),
+        }),
+      })
+
+      if (!notifyRes.ok) {
+        console.error('Notification email failed (non-critical)')
+      }
+
+      setOrderNumber(orderRef)
       setStep(4)
-    }, 2000)
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Upload failed — please check your files and try again.'
+      setErrors((prev) => ({ ...prev, submit: message }))
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   /* -- Handle file upload -- */
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
-      setUploadedFiles(Array.from(e.target.files).map((f) => f.name))
+      setUploadedFiles(Array.from(e.target.files))
       setErrors((prev) => {
         const copy = { ...prev }
         delete copy.documents
@@ -816,7 +894,7 @@ function Step2Details({
   deliveryMethod: DeliveryMethod
   setDeliveryMethod: (v: DeliveryMethod) => void
   plateType: PlateType
-  uploadedFiles: string[]
+  uploadedFiles: File[]
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   fileInputRef: React.RefObject<HTMLInputElement | null>
   errors: Record<string, string>
@@ -1145,7 +1223,7 @@ function Step2Details({
               >
                 <Check size={20} strokeWidth={2.5} />
                 <span style={{ fontWeight: 500 }}>
-                  {uploadedFiles.join(', ')}
+                  {uploadedFiles.map((f) => f.name).join(', ')}
                 </span>
               </div>
             ) : (
@@ -1793,6 +1871,23 @@ function Step3Payment({
           <ErrorMessage>{errors.roadLegal}</ErrorMessage>
         )}
       </div>
+
+      {/* Submit error */}
+      {errors.submit && (
+        <div
+          style={{
+            marginBottom: '16px',
+            padding: '12px 16px',
+            borderRadius: '8px',
+            backgroundColor: 'rgba(217, 83, 79, 0.1)',
+            border: `1px solid ${C.alertRed}`,
+            color: C.alertRed,
+            fontSize: '0.875rem',
+          }}
+        >
+          {errors.submit}
+        </div>
+      )}
 
       {/* Pay Button */}
       <div
