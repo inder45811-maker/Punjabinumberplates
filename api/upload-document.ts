@@ -10,16 +10,25 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 })
 
+if (
+  !process.env.CLOUDINARY_CLOUD_NAME ||
+  !process.env.CLOUDINARY_API_KEY ||
+  !process.env.CLOUDINARY_API_SECRET
+) {
+  console.error('Missing Cloudinary environment variables')
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
-  const { fileName, fileType, fileData } = req.body as {
+  const body = (req.body ?? {}) as {
     fileName?: string
     fileType?: string
     fileData?: string
   }
+  const { fileName, fileType, fileData } = body
 
   if (!fileName || !fileType || !fileData) {
     return res.status(400).json({ error: 'fileName, fileType and fileData are required' })
@@ -39,9 +48,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const dataUri = `data:${fileType};base64,${fileData}`
 
   try {
-    const result = await cloudinary.uploader.upload(dataUri, { public_id: publicId })
+    const result = await cloudinary.uploader.upload(dataUri, {
+      public_id: publicId,
+      resource_type: 'auto',
+    })
     return res.status(200).json({ url: result.secure_url, publicId: result.public_id })
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Cloudinary upload error:', err)
     return res.status(500).json({ error: 'Upload failed' })
   }
