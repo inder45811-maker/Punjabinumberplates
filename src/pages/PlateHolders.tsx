@@ -5,6 +5,8 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import PlatePreview from '../components/PlatePreview3D'
 import type { PlateStyle } from '../components/PlatePreview3D'
+import { useCart } from '../context/CartContext'
+import { HOLDER_VARIANTS, buildHolderAttributes } from '../lib/variantMap'
 import {
   Star,
   Check,
@@ -14,7 +16,6 @@ import {
   ClipboardList,
   Truck,
   RotateCcw,
-  MessageCircle,
   Upload,
   FileCheck,
 } from 'lucide-react'
@@ -122,6 +123,7 @@ export default function PlateHolders() {
   const [activeTab, setActiveTab] = useState<'info' | 'specs' | 'delivery'>('info')
   const [proofOfId, setProofOfId] = useState<File | null>(null)
   const [proofOfEntitlement, setProofOfEntitlement] = useState<File | null>(null)
+  const { addToCart, openCart, setPendingDocuments } = useCart()
 
   /* ─── computed price ─── */
   const stylePrices: Record<PlateStyle, number> = {
@@ -144,6 +146,20 @@ export default function PlateHolders() {
     const y = ((e.clientY - rect.top) / rect.height) * 100
     setZoomPos({ x, y })
   }, [])
+
+  /* ─── add to cart ─── */
+  const handleAddToCart = useCallback(async () => {
+    const variantId = HOLDER_VARIANTS[plateStyle]
+    if (!variantId) {
+      alert('Custom plate holders are not yet available in the Shopify store. Please add the product to Shopify admin first.')
+      return
+    }
+    await addToCart({
+      merchandiseId: variantId,
+      quantity,
+      attributes: buildHolderAttributes(regInput, plateStyle, holderQuantity, badgeStyle, sideText, notes),
+    })
+  }, [addToCart, plateStyle, holderQuantity, badgeStyle, quantity, regInput, sideText, notes])
 
   /* ─── refs ─── */
   const containerRef = useRef<HTMLDivElement>(null)
@@ -303,7 +319,20 @@ export default function PlateHolders() {
             </div>
 
             {/* Thumbnail Strip */}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: '8px',
+                marginTop: '12px',
+                overflowX: 'auto',
+                scrollSnapType: 'x mandatory',
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                paddingBottom: '8px',
+              }}
+              className="hide-scrollbar"
+            >
               {galleryImages.map((src, i) => (
                 <button
                   key={i}
@@ -318,6 +347,7 @@ export default function PlateHolders() {
                     cursor: 'pointer',
                     background: 'none',
                     flexShrink: 0,
+                    scrollSnapAlign: 'start',
                     transition: `border-color 0.3s ${easeSmooth}`,
                   }}
                 >
@@ -854,7 +884,13 @@ export default function PlateHolders() {
                       <input
                         type="file"
                         accept=".jpg,.jpeg,.png,.pdf"
-                        onChange={(e) => setProofOfId(e.target.files?.[0] || null)}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null
+                          setProofOfId(file)
+                          setPendingDocuments(
+                            [file, proofOfEntitlement].filter((f): f is File => f !== null)
+                          )
+                        }}
                         style={{ display: 'none' }}
                       />
                       {proofOfId ? (
@@ -912,7 +948,13 @@ export default function PlateHolders() {
                       <input
                         type="file"
                         accept=".jpg,.jpeg,.png,.pdf"
-                        onChange={(e) => setProofOfEntitlement(e.target.files?.[0] || null)}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0] || null
+                          setProofOfEntitlement(file)
+                          setPendingDocuments(
+                            [proofOfId, file].filter((f): f is File => f !== null)
+                          )
+                        }}
                         style={{ display: 'none' }}
                       />
                       {proofOfEntitlement ? (
@@ -1116,6 +1158,7 @@ export default function PlateHolders() {
               {/* Action Buttons */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <button
+                  onClick={handleAddToCart}
                   style={{
                     width: '100%',
                     padding: '16px 32px',
@@ -1140,45 +1183,37 @@ export default function PlateHolders() {
                     e.currentTarget.style.color = c.textPrimary
                   }}
                 >
-                  ADD TO REG BUILDER
+                  ADD TO CART
                 </button>
 
-                <a
-                  href="https://wa.me/447741234567"
-                  target="_blank"
-                  rel="noopener noreferrer"
+                <button
+                  onClick={openCart}
                   style={{
                     width: '100%',
                     padding: '16px 32px',
                     borderRadius: '9999px',
                     border: 'none',
-                    backgroundColor: '#25D366',
-                    color: '#ffffff',
+                    backgroundColor: c.accentGold,
+                    color: c.bgVoid,
                     fontFamily: 'Inter, system-ui, sans-serif',
                     fontWeight: 700,
                     fontSize: '0.875rem',
                     letterSpacing: '-0.72px',
                     textTransform: 'uppercase',
                     cursor: 'pointer',
-                    textDecoration: 'none',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
                     transition: 'transform 0.3s cubic-bezier(0.23, 1, 0.32, 1), box-shadow 0.3s cubic-bezier(0.23, 1, 0.32, 1)',
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-2px)'
-                    e.currentTarget.style.boxShadow = '0 4px 20px rgba(37, 211, 102, 0.3)'
+                    e.currentTarget.style.boxShadow = `0 0 40px ${c.accentGoldGlow}`
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'translateY(0)'
                     e.currentTarget.style.boxShadow = 'none'
                   }}
                 >
-                  <MessageCircle size={18} />
-                  ORDER ON WHATSAPP
-                </a>
+                  VIEW CART
+                </button>
               </div>
             </div>
 
@@ -1556,8 +1591,10 @@ export default function PlateHolders() {
                   <p style={{ fontSize: '0.8rem', color: c.textMuted, marginBottom: '12px', lineHeight: 1.5 }}>
                     {product.desc}
                   </p>
-                  <button
+                  <Link
+                    to="/product"
                     style={{
+                      display: 'block',
                       width: '100%',
                       padding: '10px 20px',
                       borderRadius: '9999px',
@@ -1567,6 +1604,8 @@ export default function PlateHolders() {
                       fontWeight: 700,
                       fontSize: '0.75rem',
                       textTransform: 'uppercase',
+                      textDecoration: 'none',
+                      textAlign: 'center',
                       cursor: 'pointer',
                       transition: `border-color 0.3s ${easeSmooth}, color 0.3s ${easeSmooth}`,
                     }}
@@ -1579,8 +1618,8 @@ export default function PlateHolders() {
                       e.currentTarget.style.color = c.textPrimary
                     }}
                   >
-                    ADD TO REG BUILDER
-                  </button>
+                    VIEW PRODUCT
+                  </Link>
                 </div>
               </div>
             ))}
@@ -1701,6 +1740,7 @@ export default function PlateHolders() {
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
+                onClick={handleAddToCart}
                 style={{
                   padding: '12px 24px',
                   borderRadius: '9999px',
@@ -1722,22 +1762,19 @@ export default function PlateHolders() {
                   e.currentTarget.style.color = c.textPrimary
                 }}
               >
-                ADD TO REG BUILDER
+                ADD TO CART
               </button>
-              <a
-                href="https://wa.me/447741234567"
-                target="_blank"
-                rel="noopener noreferrer"
+              <button
+                onClick={openCart}
                 style={{
                   padding: '12px 24px',
                   borderRadius: '9999px',
                   border: 'none',
-                  backgroundColor: '#25D366',
-                  color: '#ffffff',
+                  backgroundColor: c.accentGold,
+                  color: c.bgVoid,
                   fontWeight: 700,
                   fontSize: '0.75rem',
                   textTransform: 'uppercase',
-                  textDecoration: 'none',
                   cursor: 'pointer',
                   transition: 'transform 0.3s cubic-bezier(0.23, 1, 0.32, 1)',
                   display: 'inline-flex',
@@ -1751,9 +1788,8 @@ export default function PlateHolders() {
                   e.currentTarget.style.transform = 'translateY(0)'
                 }}
               >
-                <MessageCircle size={14} />
-                ORDER NOW
-              </a>
+                VIEW CART
+              </button>
             </div>
           </div>
         </div>
