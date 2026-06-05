@@ -24,6 +24,12 @@
     { "source": "/blogs/:path*", "destination": "/about", "permanent": true }
   ],
   "rewrites": [
+    { "source": "/cart", "destination": "https://3b4c31.myshopify.com/cart" },
+    { "source": "/cart/:path*", "destination": "https://3b4c31.myshopify.com/cart/:path*" },
+    { "source": "/checkouts/:path*", "destination": "https://3b4c31.myshopify.com/checkouts/:path*" },
+    { "source": "/checkout/:path*", "destination": "https://3b4c31.myshopify.com/checkout/:path*" },
+    { "source": "/wallets/:path*", "destination": "https://3b4c31.myshopify.com/wallets/:path*" },
+    { "source": "/services/:path*", "destination": "https://3b4c31.myshopify.com/services/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
