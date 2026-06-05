@@ -1,27 +1,43 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { useLocation } from 'react-router'
 import { MessageCircle, X } from 'lucide-react'
 
 const WHATSAPP_NUMBER = import.meta.env.VITE_WHATSAPP_NUMBER || '447384088600'
 const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=Hi%20Punjabi%20Number%20Plates%2C%20I%27m%20interested%20in%20your%20products.`
 
 export default function WhatsAppChat() {
+  const location = useLocation()
   const [isOpen, setIsOpen] = useState(false)
   const [showPopup, setShowPopup] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
-  // Show popup after 5 seconds
   useEffect(() => {
-    const timer = setTimeout(() => setShowPopup(true), 5000)
-    return () => clearTimeout(timer)
+    const timer = window.setTimeout(() => setShowPopup(true), 5000)
+    return () => window.clearTimeout(timer)
   }, [])
+
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 899px)')
+    const update = () => setIsMobile(query.matches)
+    update()
+    query.addEventListener('change', update)
+    return () => query.removeEventListener('change', update)
+  }, [])
+
+  const isBuilderPath = location.pathname.startsWith('/builder')
+  const isCheckoutPath = location.pathname.startsWith('/checkout')
+  const floatingBottom = isBuilderPath && isMobile ? '96px' : '24px'
+  const popupBottom = isBuilderPath && isMobile ? '162px' : '90px'
+  const canShowPopup = showPopup && !isOpen && !isMobile
+  const hideFloatingChat = isMobile && (isBuilderPath || isCheckoutPath)
 
   return (
     <>
-      {/* Chat Popup */}
-      {showPopup && !isOpen && (
+      {canShowPopup && (
         <div
           style={{
             position: 'fixed',
-            bottom: '90px',
+            bottom: popupBottom,
             right: '24px',
             zIndex: 999,
             maxWidth: '280px',
@@ -34,7 +50,9 @@ export default function WhatsAppChat() {
           }}
         >
           <button
+            type="button"
             onClick={() => setShowPopup(false)}
+            aria-label="Close WhatsApp prompt"
             style={{
               position: 'absolute',
               top: '8px',
@@ -57,7 +75,7 @@ export default function WhatsAppChat() {
               lineHeight: 1.4,
             }}
           >
-            👋 Need help with your order?
+            Need help with your order?
           </p>
           <p
             style={{
@@ -93,56 +111,59 @@ export default function WhatsAppChat() {
         </div>
       )}
 
-      {/* Floating Chat Button */}
-      <a
-        href={WHATSAPP_LINK}
-        target="_blank"
-        rel="noopener noreferrer"
-        onClick={() => setIsOpen(true)}
-        style={{
-          position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          zIndex: 998,
-          width: '56px',
-          height: '56px',
-          borderRadius: '50%',
-          backgroundColor: '#25D366',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 4px 16px rgba(37, 211, 102, 0.3)',
-          cursor: 'pointer',
-          transition: 'transform 0.2s ease, box-shadow 0.2s ease',
-          textDecoration: 'none',
-        }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.transform = 'scale(1.1)'
-          e.currentTarget.style.boxShadow = '0 6px 24px rgba(37, 211, 102, 0.5)'
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.transform = 'scale(1)'
-          e.currentTarget.style.boxShadow = '0 4px 16px rgba(37, 211, 102, 0.3)'
-        }}
-      >
-        <MessageCircle size={28} color="#fff" fill="#fff" />
-      </a>
+      {!hideFloatingChat && (
+        <>
+          <a
+            href={WHATSAPP_LINK}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={() => setIsOpen(true)}
+            aria-label="Chat on WhatsApp"
+            style={{
+              position: 'fixed',
+              bottom: floatingBottom,
+              right: '24px',
+              zIndex: 998,
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              backgroundColor: '#25D366',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 4px 16px rgba(37, 211, 102, 0.3)',
+              cursor: 'pointer',
+              transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+              textDecoration: 'none',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.1)'
+              e.currentTarget.style.boxShadow = '0 6px 24px rgba(37, 211, 102, 0.5)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)'
+              e.currentTarget.style.boxShadow = '0 4px 16px rgba(37, 211, 102, 0.3)'
+            }}
+          >
+            <MessageCircle size={28} color="#fff" fill="#fff" />
+          </a>
 
-      {/* Pulse animation ring */}
-      <div
-        style={{
-          position: 'fixed',
-          bottom: '24px',
-          right: '24px',
-          zIndex: 997,
-          width: '56px',
-          height: '56px',
-          borderRadius: '50%',
-          border: '2px solid #25D366',
-          animation: 'pulse-ring 2s ease-out infinite',
-          pointerEvents: 'none',
-        }}
-      />
+          <div
+            style={{
+              position: 'fixed',
+              bottom: floatingBottom,
+              right: '24px',
+              zIndex: 997,
+              width: '56px',
+              height: '56px',
+              borderRadius: '50%',
+              border: '2px solid #25D366',
+              animation: 'pulse-ring 2s ease-out infinite',
+              pointerEvents: 'none',
+            }}
+          />
+        </>
+      )}
 
       <style>{`
         @keyframes slideInUp {
