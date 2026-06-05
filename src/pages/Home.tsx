@@ -622,7 +622,7 @@ function GalleryPreviewSection() {
             <div
               key={i}
               style={{
-                position: 'relative', aspectRatio: '4/3', borderRadius: '8px',
+                position: 'relative', aspectRatio: '3/4', borderRadius: '8px',
                 overflow: 'hidden', cursor: 'pointer',
               }}
               onMouseEnter={(e) => {

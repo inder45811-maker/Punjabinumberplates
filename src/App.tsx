@@ -9,10 +9,12 @@ import Gallery from './pages/Gallery'
 import Legal from './pages/Legal'
 import Contact from './pages/Contact'
 import About from './pages/About'
+import { CartProvider } from './context/CartContext'
 
 export default function App() {
   return (
-    <Layout>
+    <CartProvider>
+      <Layout>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/product" element={<Product />} />
@@ -25,5 +27,6 @@ export default function App() {
         <Route path="/about" element={<About />} />
       </Routes>
     </Layout>
+    </CartProvider>
   )
 }

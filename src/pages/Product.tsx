@@ -738,9 +738,10 @@ export default function Product() {
                         onChange={(e) => {
                           const file = e.target.files?.[0] || null
                           setProofOfId(file)
-                          setPendingDocuments(
-                            [file, proofOfEntitlement].filter((f): f is File => f !== null)
-                          )
+                          setPendingDocuments({
+                            proofOfId: file,
+                            proofOfEntitlement,
+                          })
                         }}
                         style={{ display: 'none' }}
                       />
@@ -802,9 +803,10 @@ export default function Product() {
                         onChange={(e) => {
                           const file = e.target.files?.[0] || null
                           setProofOfEntitlement(file)
-                          setPendingDocuments(
-                            [proofOfId, file].filter((f): f is File => f !== null)
-                          )
+                          setPendingDocuments({
+                            proofOfId,
+                            proofOfEntitlement: file,
+                          })
                         }}
                         style={{ display: 'none' }}
                       />

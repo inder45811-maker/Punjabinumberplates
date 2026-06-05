@@ -1,50 +1,40 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
-import { useNavigate } from 'react-router'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { useGSAP } from '@gsap/react'
+import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react'
+import { Link } from 'react-router'
 import {
+  AlertCircle,
   Check,
-  Upload,
-  Lock,
-  Zap,
-  CreditCard,
-  Loader,
   ChevronRight,
-  Award,
-  Clock,
-  Instagram,
-  Facebook,
+  FileCheck,
+  Loader,
+  Lock,
+  Minus,
+  Plus,
+  ShieldCheck,
+  ShoppingBag,
+  Upload,
+  X,
 } from 'lucide-react'
-import { useCart } from '../context/CartContext'
-import { cartAttributesUpdate } from '../lib/shopify'
+import { useCart, type PendingDocuments } from '../context/CartContext'
+import {
+  cartAttributesUpdate,
+  cartBuyerIdentityUpdate,
+  type Attribute,
+  type Cart,
+} from '../lib/shopify'
 
-gsap.registerPlugin(ScrollTrigger)
-
-/* ------------------------------------------------------------------ */
-/*  DESIGN TOKENS                                                       */
-/* ------------------------------------------------------------------ */
 const C = {
   bgVoid: '#050401',
   bgSurface: '#111111',
+  bgPanel: '#0d0d0d',
   textPrimary: '#f2f3f4',
   textMuted: '#757575',
   accentGold: '#ffd700',
-  accentGoldDim: '#b8860b',
   accentGoldGlow: 'rgba(255, 215, 0, 0.15)',
   borderSubtle: '#222222',
   alertRed: '#d9534f',
   successGreen: '#4f8a4f',
 } as const
 
-const _easeSmooth = 'cubic-bezier(0.23, 1, 0.32, 1)'
-const _easeExpoOut = 'cubic-bezier(0.16, 1, 0.3, 1)'
-void _easeSmooth
-void _easeExpoOut
-
-/* ------------------------------------------------------------------ */
-/*  TYPES                                                               */
-/* ------------------------------------------------------------------ */
 interface CustomerDetails {
   fullName: string
   email: string
@@ -56,2632 +46,1329 @@ interface CustomerDetails {
   country: string
 }
 
-interface CardDetails {
-  number: string
-  expiryMonth: string
-  expiryYear: string
-  cvc: string
-  name: string
+interface UploadedDocument {
+  key: string
+  label: string
+  fileName: string
+  url: string
+  publicId: string
 }
 
-type PlateConfig = 'front-rear' | 'front-only' | 'rear-only'
-type PlateType = 'road-legal' | 'show-plate'
-type DeliveryMethod = 'standard' | 'express'
-type PaymentMethod = 'card' | 'paypal' | 'clearpay'
-type Step = 1 | 2 | 3 | 4
+type Step = 'details' | 'review'
+type ErrorMap = Partial<Record<string, string>>
 
-/* ------------------------------------------------------------------ */
-/*  HELPERS                                                             */
-/* ------------------------------------------------------------------ */
-function isValidUKRegistration(reg: string): boolean {
-  const clean = reg.replace(/\s/g, '').toUpperCase()
-  if (clean.length < 2 || clean.length > 7) return false
-  // Current format: 2 letters + 2 digits + 3 letters
-  const currentFormat = /^[A-Z]{2}\d{2}[A-Z]{3}$/
-  // Prefix format: 1-3 letters + 1-3 digits + 3 letters
-  const prefixFormat = /^[A-Z]{1,3}\d{1,3}[A-Z]{3}$/
-  // Suffix format: 3 letters + 1-3 digits + 1-3 letters
-  const suffixFormat = /^[A-Z]{3}\d{1,3}[A-Z]{1,3}$/
-  // Dateless: 1-3 letters + 1-4 numbers (or vice versa)
-  const datelessFormat = /^([A-Z]{1,3}\d{1,4}|\d{1,4}[A-Z]{1,3})$/
-  return (
-    currentFormat.test(clean) ||
-    prefixFormat.test(clean) ||
-    suffixFormat.test(clean) ||
-    datelessFormat.test(clean)
+const emptyCustomer: CustomerDetails = {
+  fullName: '',
+  email: '',
+  phone: '',
+  address1: '',
+  address2: '',
+  city: '',
+  postcode: '',
+  country: 'United Kingdom',
+}
+
+const currencyFormatter = new Intl.NumberFormat('en-GB', {
+  style: 'currency',
+  currency: 'GBP',
+})
+
+function formatMoney(amount: string | number) {
+  const value = typeof amount === 'number' ? amount : Number.parseFloat(amount)
+  return currencyFormatter.format(Number.isFinite(value) ? value : 0)
+}
+
+function titleCase(value: string) {
+  return value
+    .replace(/[_-]/g, ' ')
+    .toLowerCase()
+    .replace(/\b\w/g, (m) => m.toUpperCase())
+}
+
+function attrValue(attrs: Attribute[], key: string) {
+  return attrs.find((attr) => attr.key.toLowerCase() === key.toLowerCase())?.value
+}
+
+function isRoadLegalCart(cart: Cart | null) {
+  if (!cart) return false
+  return cart.lines.nodes.some((line) => {
+    const type = attrValue(line.attributes, 'Type')
+    return (
+      type?.toUpperCase().includes('ROAD LEGAL') ||
+      line.merchandise.product.title.toUpperCase().includes('ROAD LEGAL')
+    )
+  })
+}
+
+function collectCartMetadata(cart: Cart) {
+  const registrations = new Set<string>()
+  const plateTypes = new Set<string>()
+  const notes = new Set<string>()
+
+  cart.lines.nodes.forEach((line) => {
+    const registration =
+      attrValue(line.attributes, 'Registration') || attrValue(line.attributes, 'Text')
+    const type = attrValue(line.attributes, 'Type')
+    const note = attrValue(line.attributes, 'Notes')
+
+    if (registration) registrations.add(registration)
+    if (type) plateTypes.add(type)
+    if (note) notes.add(note)
+  })
+
+  return {
+    registrations: Array.from(registrations).join(', '),
+    plateTypes: Array.from(plateTypes).join(', '),
+    notes: Array.from(notes).join(' | '),
+  }
+}
+
+type CartLineNode = Cart['lines']['nodes'][number]
+
+const REVIEW_ATTRIBUTE_ORDER = [
+  'Registration',
+  'Text',
+  'Type',
+  'Style',
+  'Configuration',
+  'Plate Style',
+  'Holder Qty',
+  'Badge',
+  'Side Text',
+  'Notes',
+]
+
+function orderedReviewAttributes(line: CartLineNode) {
+  const keys = new Set(REVIEW_ATTRIBUTE_ORDER.map((key) => key.toLowerCase()))
+  const ordered = REVIEW_ATTRIBUTE_ORDER.flatMap((key) => {
+    const value = attrValue(line.attributes, key)
+    return value ? [{ key, value }] : []
+  })
+  const remaining = line.attributes.filter(
+    (attr) => attr.value && !keys.has(attr.key.toLowerCase())
   )
-}
-
-function getConfigPrice(config: PlateConfig): number {
-  if (config === 'front-rear') return 59.99
-  return 34.99
+  return [...ordered, ...remaining]
 }
 
 function fileToBase64(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader()
-    reader.onload = () => resolve((reader.result as string).split(',')[1])
+    reader.onload = () => {
+      const result = String(reader.result ?? '')
+      resolve(result.includes(',') ? result.split(',')[1] : result)
+    }
     reader.onerror = reject
     reader.readAsDataURL(file)
   })
 }
 
-function formatCardNumber(v: string): string {
-  return v
-    .replace(/\s/g, '')
-    .replace(/\D/g, '')
-    .slice(0, 16)
-    .replace(/(.{4})/g, '$1 ')
-    .trim()
+async function uploadDocument(file: File, key: string, label: string) {
+  const fileData = await fileToBase64(file)
+  const controller = new AbortController()
+  const timeout = window.setTimeout(() => controller.abort(), 30_000)
+
+  try {
+    const res = await fetch('/api/upload-document', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        fileName: file.name,
+        fileType: file.type,
+        fileData,
+      }),
+      signal: controller.signal,
+    })
+
+    if (!res.ok) {
+      const isJson = res.headers
+        .get('content-type')
+        ?.toLowerCase()
+        .includes('application/json')
+      const body = isJson
+        ? ((await res.json().catch(() => ({}))) as { error?: string })
+        : {}
+      const fallback =
+        res.status === 404
+          ? 'Document upload API is not available on the current dev server'
+          : `Document upload failed (${res.status})`
+      throw new Error(body.error || fallback)
+    }
+
+    const result = (await res.json()) as { url: string; publicId: string }
+    return {
+      key,
+      label,
+      fileName: file.name,
+      url: result.url,
+      publicId: result.publicId,
+    } satisfies UploadedDocument
+  } finally {
+    window.clearTimeout(timeout)
+  }
 }
 
-/* ------------------------------------------------------------------ */
-/*  CHECKOUT PAGE                                                       */
-/* ------------------------------------------------------------------ */
+function buildCartAttributes(
+  cart: Cart,
+  customer: CustomerDetails,
+  documentsRequired: boolean,
+  uploadedDocuments: UploadedDocument[]
+) {
+  const metadata = collectCartMetadata(cart)
+  const attributes: Attribute[] = [
+    { key: 'checkout_stage', value: 'pre_shopify_complete' },
+    { key: 'customer_name', value: customer.fullName.trim() },
+    { key: 'customer_email', value: customer.email.trim() },
+    { key: 'customer_phone', value: customer.phone.trim() },
+    { key: 'shipping_address_1', value: customer.address1.trim() },
+    { key: 'shipping_city', value: customer.city.trim() },
+    { key: 'shipping_postcode', value: customer.postcode.trim().toUpperCase() },
+    { key: 'shipping_country', value: customer.country.trim() },
+    {
+      key: 'dvla_documents_required',
+      value: documentsRequired ? 'yes' : 'no',
+    },
+  ]
+
+  if (customer.address2.trim()) {
+    attributes.push({ key: 'shipping_address_2', value: customer.address2.trim() })
+  }
+  if (metadata.registrations) {
+    attributes.push({ key: 'registrations', value: metadata.registrations })
+  }
+  if (metadata.plateTypes) {
+    attributes.push({ key: 'plate_types', value: metadata.plateTypes })
+  }
+  if (metadata.notes) {
+    attributes.push({ key: 'customer_notes', value: metadata.notes })
+  }
+
+  uploadedDocuments.forEach((document) => {
+    attributes.push(
+      { key: `${document.key}_url`, value: document.url },
+      { key: `${document.key}_file_name`, value: document.fileName },
+      { key: `${document.key}_cloudinary_id`, value: document.publicId }
+    )
+  })
+
+  return attributes
+}
+
+function countryToShopifyCode(country: string) {
+  return country.toLowerCase() === 'united kingdom' ? 'GB' : undefined
+}
+
 export default function Checkout() {
-  const navigate = useNavigate()
-  const { cart, pendingDocuments } = useCart()
-  const containerRef = useRef<HTMLDivElement>(null)
-
-  /* -- Step state -- */
-  const [step, setStep] = useState<Step>(1)
-
-  /* -- Step 1 state -- */
-  const [registration, setRegistration] = useState('')
-  const [plateConfig, setPlateConfig] = useState<PlateConfig>('front-rear')
-  const [plateType, setPlateType] = useState<PlateType>('road-legal')
-  const [notes, setNotes] = useState('')
-
-  /* -- Step 2 state -- */
-  const [customer, setCustomer] = useState<CustomerDetails>({
-    fullName: '',
-    email: '',
-    phone: '',
-    address1: '',
-    address2: '',
-    city: '',
-    postcode: '',
-    country: 'United Kingdom',
-  })
-  const [deliveryMethod, setDeliveryMethod] =
-    useState<DeliveryMethod>('standard')
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
-
-  useEffect(() => {
-    if (pendingDocuments.length > 0 && uploadedFiles.length === 0) {
-      setUploadedFiles(pendingDocuments)
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  /* -- Step 3 state -- */
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('card')
-  const [cardDetails, setCardDetails] = useState<CardDetails>({
-    number: '',
-    expiryMonth: '',
-    expiryYear: '',
-    cvc: '',
-    name: '',
-  })
-  const [billingSameAsShipping, setBillingSameAsShipping] = useState(true)
-  const [billingAddress, setBillingAddress] = useState<CustomerDetails>({
-    fullName: '',
-    email: '',
-    phone: '',
-    address1: '',
-    address2: '',
-    city: '',
-    postcode: '',
-    country: 'United Kingdom',
-  })
+  const {
+    cart,
+    pendingDocuments,
+    setPendingDocuments,
+    removeLine,
+    updateQuantity,
+    isLoading,
+  } = useCart()
+  const [step, setStep] = useState<Step>('details')
+  const [customer, setCustomer] = useState<CustomerDetails>(emptyCustomer)
+  const [proofOfId, setProofOfId] = useState<File | null>(
+    pendingDocuments.proofOfId
+  )
+  const [proofOfEntitlement, setProofOfEntitlement] = useState<File | null>(
+    pendingDocuments.proofOfEntitlement
+  )
   const [termsAccepted, setTermsAccepted] = useState(false)
   const [roadLegalConfirmed, setRoadLegalConfirmed] = useState(false)
-
-  /* -- Submit state -- */
+  const [errors, setErrors] = useState<ErrorMap>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [orderNumber, setOrderNumber] = useState('')
 
-  /* -- Validation errors -- */
-  const [errors, setErrors] = useState<Record<string, string>>({})
+  const lines = cart?.lines.nodes ?? []
+  const requiresDocuments = useMemo(() => isRoadLegalCart(cart), [cart])
+  const documentsReady =
+    !requiresDocuments || Boolean(proofOfId && proofOfEntitlement)
+  const subtotal = cart?.cost.subtotalAmount.amount ?? '0'
+  const total = cart?.cost.totalAmount.amount ?? subtotal
 
-  /* -- File input ref -- */
-  const fileInputRef = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    setProofOfId(pendingDocuments.proofOfId)
+    setProofOfEntitlement(pendingDocuments.proofOfEntitlement)
+  }, [pendingDocuments])
 
-  /* -- GSAP entrance animations -- */
-  useGSAP(
-    () => {
-      if (step !== 4) {
-        gsap.fromTo(
-          '.checkout-step-content',
-          { opacity: 0, y: 40 },
-          {
-            opacity: 1,
-            y: 0,
-            duration: 0.8,
-            ease: 'power3.out',
-          }
-        )
-      }
-    },
-    { scope: containerRef, dependencies: [step] }
-  )
+  const updateCustomer = (field: keyof CustomerDetails, value: string) => {
+    setCustomer((prev) => ({ ...prev, [field]: value }))
+    setErrors((prev) => {
+      const next = { ...prev }
+      delete next[field]
+      return next
+    })
+  }
 
-  /* -- Confirmation animation -- */
-  useGSAP(
-    () => {
-      if (step === 4) {
-        const tl = gsap.timeline()
-        tl.fromTo(
-          '.confirm-icon-svg',
-          { strokeDashoffset: 200 },
-          { strokeDashoffset: 0, duration: 1.5, ease: 'power3.out' }
-        )
-          .fromTo(
-            '.confirm-heading',
-            { opacity: 0, y: 30 },
-            { opacity: 1, y: 0, duration: 1, ease: 'power3.out' },
-            '-=0.8'
-          )
-          .fromTo(
-            '.confirm-body',
-            { opacity: 0, y: 20 },
-            { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' },
-            '-=0.5'
-          )
-          .fromTo(
-            '.confirm-timeline > div',
-            { opacity: 0 },
-            { opacity: 1, duration: 0.5, stagger: 0.3, ease: 'power2.out' },
-            '-=0.3'
-          )
-          .fromTo(
-            '.confirm-actions',
-            { opacity: 0, y: 20 },
-            { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' },
-            '-=0.2'
-          )
-      }
-    },
-    { scope: containerRef, dependencies: [step] }
-  )
-
-  /* -- Validate registration -- */
-  const regValid = isValidUKRegistration(registration)
-
-  /* -- Validate step 2 -- */
-  const step2Valid = useCallback(() => {
-    const newErrors: Record<string, string> = {}
-    if (!customer.fullName.trim()) newErrors.fullName = 'Required'
-    if (!customer.email.trim()) newErrors.email = 'Required'
-    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email))
-      newErrors.email = 'Invalid email'
-    if (!customer.address1.trim()) newErrors.address1 = 'Required'
-    if (!customer.city.trim()) newErrors.city = 'Required'
-    if (!customer.postcode.trim()) newErrors.postcode = 'Required'
-    if (plateType === 'road-legal' && uploadedFiles.length === 0)
-      newErrors.documents = 'DVLA documents required'
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }, [customer, plateType, uploadedFiles])
-
-  /* -- Validate step 3 -- */
-  const step3Valid = useCallback(() => {
-    const newErrors: Record<string, string> = {}
-    if (!termsAccepted) newErrors.terms = 'You must accept the terms'
-    if (plateType === 'road-legal' && !roadLegalConfirmed)
-      newErrors.roadLegal = 'You must confirm DVLA compliance'
-    if (paymentMethod === 'card') {
-      const cleanNum = cardDetails.number.replace(/\s/g, '')
-      if (cleanNum.length < 16) newErrors.cardNumber = 'Invalid card number'
-      if (!cardDetails.expiryMonth) newErrors.expiryMonth = 'Required'
-      if (!cardDetails.expiryYear) newErrors.expiryYear = 'Required'
-      if (!cardDetails.cvc || cardDetails.cvc.length < 3)
-        newErrors.cvc = 'Invalid CVC'
-      if (!cardDetails.name.trim()) newErrors.cardName = 'Required'
+  const setDocument = (slot: keyof PendingDocuments, file: File | null) => {
+    const next = {
+      proofOfId,
+      proofOfEntitlement,
+      [slot]: file,
     }
-    if (!billingSameAsShipping) {
-      if (!billingAddress.fullName.trim())
-        newErrors.billingFullName = 'Required'
-      if (!billingAddress.address1.trim())
-        newErrors.billingAddress1 = 'Required'
-      if (!billingAddress.city.trim()) newErrors.billingCity = 'Required'
-      if (!billingAddress.postcode.trim())
-        newErrors.billingPostcode = 'Required'
-    }
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }, [
-    termsAccepted,
-    plateType,
-    roadLegalConfirmed,
-    paymentMethod,
-    cardDetails,
-    billingSameAsShipping,
-    billingAddress,
-  ])
-
-  /* -- Submit order -- */
-  const handlePlaceOrder = async () => {
-    if (!step3Valid()) return
-    setIsSubmitting(true)
+    setProofOfId(next.proofOfId)
+    setProofOfEntitlement(next.proofOfEntitlement)
+    setPendingDocuments(next)
     setErrors((prev) => {
       const copy = { ...prev }
-      delete copy.submit
+      delete copy.documents
       return copy
+    })
+  }
+
+  const validate = () => {
+    const next: ErrorMap = {}
+
+    if (!cart || lines.length === 0) {
+      next.cart = 'Your bag is empty.'
+    }
+    if (!customer.fullName.trim()) next.fullName = 'Full name is required'
+    if (!customer.email.trim()) next.email = 'Email is required'
+    else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) {
+      next.email = 'Enter a valid email address'
+    }
+    if (!customer.phone.trim()) next.phone = 'Phone number is required'
+    if (!customer.address1.trim()) next.address1 = 'Address is required'
+    if (!customer.city.trim()) next.city = 'Town or city is required'
+    if (!customer.postcode.trim()) next.postcode = 'Postcode is required'
+
+    if (requiresDocuments && !documentsReady) {
+      next.documents = 'Upload both proof of identification and proof of entitlement'
+    }
+    if (!termsAccepted) next.terms = 'Accept the terms before continuing'
+    if (requiresDocuments && !roadLegalConfirmed) {
+      next.roadLegal = 'Confirm this road legal plate order is DVLA compliant'
+    }
+
+    setErrors(next)
+    return Object.keys(next).length === 0
+  }
+
+  const continueToReview = () => {
+    if (validate()) {
+      setStep('review')
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
+  const continueToShopify = async () => {
+    if (!cart || !validate()) return
+
+    setIsSubmitting(true)
+    setErrors((prev) => {
+      const next = { ...prev }
+      delete next.submit
+      return next
     })
 
     try {
-      // 1. Upload each file to Cloudinary
-      const uploadResults = await Promise.all(
-        uploadedFiles.map(async (file) => {
-          const base64 = await fileToBase64(file)
-          const controller = new AbortController()
-          const timeout = setTimeout(() => controller.abort(), 30_000)
-          const res = await fetch('/api/upload-document', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fileName: file.name, fileType: file.type, fileData: base64 }),
-            signal: controller.signal,
-          }).finally(() => clearTimeout(timeout))
-          if (!res.ok) {
-            const { error } = await res.json()
-            throw new Error(error || 'Upload failed')
-          }
-          return (await res.json()) as { url: string; publicId: string }
-        })
-      )
-
-      // 2. Stamp URLs onto the Shopify cart (non-blocking on failure)
-      if (cart?.id && uploadResults.length > 0) {
-        const attrs = uploadResults.map((r, i) => ({
-          key: `document_${i + 1}_url`,
-          value: r.url,
-        }))
-        try {
-          await cartAttributesUpdate(cart.id, attrs)
-        } catch (err) {
-          console.error('Cart attributes update failed (non-critical):', err)
+      const uploads: Promise<UploadedDocument>[] = []
+      if (requiresDocuments) {
+        if (proofOfId) uploads.push(uploadDocument(proofOfId, 'proof_of_id', 'Proof of ID'))
+        if (proofOfEntitlement) {
+          uploads.push(
+            uploadDocument(
+              proofOfEntitlement,
+              'proof_of_entitlement',
+              'Proof of Entitlement'
+            )
+          )
         }
       }
 
-      // 3. Send notification email to shop owner
-      const orderRef = `APX-${new Date().getFullYear()}-${String(
-        Math.floor(Math.random() * 999)
-      ).padStart(3, '0')}`
+      const uploadedDocuments = await Promise.all(uploads)
+      let updatedCart = await cartAttributesUpdate(
+        cart.id,
+        buildCartAttributes(cart, customer, requiresDocuments, uploadedDocuments)
+      )
 
-      const notifyRes = await fetch('/api/notify-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          orderRef,
-          customerName: customer.fullName,
-          phone: customer.phone,
-          plateText: registration,
-          deliveryMethod,
-          documents: uploadResults.map((r, i) => ({
-            label: `Document ${i + 1}`,
-            fileName: uploadedFiles[i].name,
-            url: r.url,
-          })),
-        }),
-      })
-
-      if (!notifyRes.ok) {
-        notifyRes.text().then((body) => {
-          console.error('Notification email failed (non-critical):', body)
-        }).catch(() => {})
+      try {
+        updatedCart = await cartBuyerIdentityUpdate(cart.id, {
+          email: customer.email.trim(),
+          phone: customer.phone.trim(),
+          countryCode: countryToShopifyCode(customer.country),
+        })
+      } catch (err) {
+        console.error('Shopify buyer identity update failed:', err)
       }
 
-      setOrderNumber(orderRef)
-      setStep(4)
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Upload failed — please check your files and try again.'
+      window.location.assign(updatedCart.checkoutUrl || cart.checkoutUrl)
+    } catch (err) {
+      const message =
+        err instanceof Error
+          ? err.message
+          : 'Checkout preparation failed. Please try again.'
       setErrors((prev) => ({ ...prev, submit: message }))
     } finally {
       setIsSubmitting(false)
     }
   }
 
-  /* -- Handle file upload -- */
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0) {
-      setUploadedFiles(Array.from(e.target.files))
-      setErrors((prev) => {
-        const copy = { ...prev }
-        delete copy.documents
-        return copy
-      })
-    }
+  if (!cart || lines.length === 0) {
+    return <EmptyCheckout />
   }
 
-  /* -- Computed prices -- */
-  const platePrice = getConfigPrice(plateConfig)
-  const deliveryPrice = deliveryMethod === 'express' ? 6.99 : 0
-  const totalPrice = platePrice + deliveryPrice
-
-  /* -- Progress bar width -- */
-  const progressWidth = step === 1 ? 0 : step === 2 ? 50 : step === 3 ? 100 : 100
-
-  /* ==================== RENDER ==================== */
   return (
-    <div
-      ref={containerRef}
+    <main
       style={{
         backgroundColor: C.bgVoid,
         minHeight: '100dvh',
-        paddingTop: '104px',
-        paddingBottom: '120px',
+        padding: '80px 24px 120px',
+        color: C.textPrimary,
+      }}
+    >
+      <div style={{ maxWidth: '1180px', margin: '0 auto' }}>
+        <Header step={step} documentsRequired={requiresDocuments} />
+
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'minmax(0, 1fr) 360px',
+            gap: '28px',
+            alignItems: 'start',
+          }}
+          className="checkout-grid"
+        >
+          <section style={{ display: 'flex', flexDirection: 'column', gap: '18px' }}>
+            {step === 'details' ? (
+              <>
+                <Panel title="1. Review Your Bag" icon={<ShoppingBag size={18} />}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {lines.map((line) => (
+                      <CartLineRow
+                        key={line.id}
+                        line={line}
+                        disabled={isLoading || isSubmitting}
+                        onRemove={() => removeLine(line.id)}
+                        onQuantityChange={(quantity) =>
+                          updateQuantity(line.id, quantity)
+                        }
+                      />
+                    ))}
+                  </div>
+                  {errors.cart && <ErrorMessage>{errors.cart}</ErrorMessage>}
+                </Panel>
+
+                <Panel title="2. Customer Details" icon={<ShieldCheck size={18} />}>
+                  <div
+                    style={{
+                      display: 'grid',
+                      gridTemplateColumns: '1fr 1fr',
+                      gap: '14px',
+                    }}
+                    className="checkout-two-col"
+                  >
+                    <InputField
+                      label="Full Name"
+                      value={customer.fullName}
+                      error={errors.fullName}
+                      onChange={(value) => updateCustomer('fullName', value)}
+                    />
+                    <InputField
+                      label="Email"
+                      type="email"
+                      value={customer.email}
+                      error={errors.email}
+                      onChange={(value) => updateCustomer('email', value)}
+                    />
+                    <InputField
+                      label="Phone"
+                      type="tel"
+                      value={customer.phone}
+                      error={errors.phone}
+                      onChange={(value) => updateCustomer('phone', value)}
+                    />
+                    <InputField
+                      label="Country"
+                      value={customer.country}
+                      onChange={(value) => updateCustomer('country', value)}
+                    />
+                    <InputField
+                      label="Address Line 1"
+                      value={customer.address1}
+                      error={errors.address1}
+                      onChange={(value) => updateCustomer('address1', value)}
+                      wide
+                    />
+                    <InputField
+                      label="Address Line 2"
+                      value={customer.address2}
+                      onChange={(value) => updateCustomer('address2', value)}
+                      wide
+                    />
+                    <InputField
+                      label="Town Or City"
+                      value={customer.city}
+                      error={errors.city}
+                      onChange={(value) => updateCustomer('city', value)}
+                    />
+                    <InputField
+                      label="Postcode"
+                      value={customer.postcode}
+                      error={errors.postcode}
+                      onChange={(value) =>
+                        updateCustomer('postcode', value.toUpperCase())
+                      }
+                    />
+                  </div>
+                </Panel>
+
+                <Panel
+                  title="3. DVLA Compliance"
+                  icon={<FileCheck size={18} />}
+                  muted={!requiresDocuments}
+                >
+                  {requiresDocuments ? (
+                    <>
+                      <p style={mutedText}>
+                        Road legal plates require proof of identification and proof of
+                        entitlement before payment. The files are attached to the
+                        Shopify cart before checkout opens.
+                      </p>
+                      <div
+                        style={{
+                          display: 'grid',
+                          gridTemplateColumns: '1fr 1fr',
+                          gap: '14px',
+                          marginTop: '14px',
+                        }}
+                        className="checkout-two-col"
+                      >
+                        <DocumentUpload
+                          label="Proof Of Identification"
+                          file={proofOfId}
+                          onChange={(file) => setDocument('proofOfId', file)}
+                        />
+                        <DocumentUpload
+                          label="Proof Of Entitlement"
+                          file={proofOfEntitlement}
+                          onChange={(file) =>
+                            setDocument('proofOfEntitlement', file)
+                          }
+                        />
+                      </div>
+                      {errors.documents && (
+                        <ErrorMessage>{errors.documents}</ErrorMessage>
+                      )}
+                    </>
+                  ) : (
+                    <p style={mutedText}>
+                      This cart does not contain a road legal plate selection, so DVLA
+                      documents are not required before Shopify checkout.
+                    </p>
+                  )}
+                </Panel>
+
+                <Panel title="4. Confirm And Continue" icon={<Lock size={18} />}>
+                  <CheckboxRow
+                    checked={termsAccepted}
+                    onChange={setTermsAccepted}
+                    label={
+                      <>
+                        I agree to the{' '}
+                        <Link to="/legal" style={linkStyle}>
+                          terms and privacy policy
+                        </Link>
+                        .
+                      </>
+                    }
+                    error={errors.terms}
+                  />
+                  {requiresDocuments && (
+                    <CheckboxRow
+                      checked={roadLegalConfirmed}
+                      onChange={setRoadLegalConfirmed}
+                      label="I confirm this is a DVLA-compliant road legal plate order."
+                      error={errors.roadLegal}
+                    />
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                    <PrimaryButton onClick={continueToReview}>
+                      Review Order <ChevronRight size={18} />
+                    </PrimaryButton>
+                  </div>
+                </Panel>
+              </>
+            ) : (
+              <ReviewPanel
+                cart={cart}
+                customer={customer}
+                requiresDocuments={requiresDocuments}
+                proofOfId={proofOfId}
+                proofOfEntitlement={proofOfEntitlement}
+                isSubmitting={isSubmitting}
+                errors={errors}
+                onBack={() => setStep('details')}
+                onContinue={continueToShopify}
+              />
+            )}
+          </section>
+
+          <OrderSummary
+            subtotal={subtotal}
+            total={total}
+            totalQuantity={cart.totalQuantity}
+            documentsReady={documentsReady}
+            requiresDocuments={requiresDocuments}
+          />
+        </div>
+      </div>
+
+      <style>{`
+        @media (max-width: 980px) {
+          .checkout-grid {
+            grid-template-columns: 1fr !important;
+          }
+        }
+        @media (max-width: 680px) {
+          .checkout-two-col {
+            grid-template-columns: 1fr !important;
+          }
+        }
+      `}</style>
+    </main>
+  )
+}
+
+function EmptyCheckout() {
+  return (
+    <main
+      style={{
+        minHeight: '100dvh',
+        backgroundColor: C.bgVoid,
+        color: C.textPrimary,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '80px 24px',
+      }}
+    >
+      <div style={{ maxWidth: '460px', textAlign: 'center' }}>
+        <ShoppingBag size={44} color={C.accentGold} />
+        <h1 style={headingStyle}>Your Bag Is Empty</h1>
+        <p style={{ ...mutedText, marginBottom: '24px' }}>
+          Add a plate, holder, or keyring before starting checkout.
+        </p>
+        <Link to="/product" style={{ ...buttonStyle, textDecoration: 'none' }}>
+          Start Shopping
+        </Link>
+      </div>
+    </main>
+  )
+}
+
+function Header({
+  step,
+  documentsRequired,
+}: {
+  step: Step
+  documentsRequired: boolean
+}) {
+  return (
+    <header style={{ marginBottom: '28px' }}>
+      <p style={eyebrowStyle}>Secure Shopify Checkout</p>
+      <h1 style={headingStyle}>Complete Your Order</h1>
+      <p style={{ ...mutedText, maxWidth: '760px' }}>
+        We collect compliance details first, attach them to your Shopify cart,
+        then send you to Shopify to pay securely.
+      </p>
+      <div
+        style={{
+          display: 'flex',
+          flexWrap: 'wrap',
+          gap: '10px',
+          marginTop: '18px',
+        }}
+      >
+        <StatusPill active={step === 'details'}>Details</StatusPill>
+        <StatusPill active={step === 'review'}>Review</StatusPill>
+        <StatusPill active>Shopify Payment</StatusPill>
+        {documentsRequired && <StatusPill active>DVLA Docs Required</StatusPill>}
+      </div>
+    </header>
+  )
+}
+
+function StatusPill({
+  active,
+  children,
+}: {
+  active?: boolean
+  children: ReactNode
+}) {
+  return (
+    <span
+      style={{
+        border: `1px solid ${active ? C.accentGold : C.borderSubtle}`,
+        color: active ? C.accentGold : C.textMuted,
+        borderRadius: '9999px',
+        padding: '7px 12px',
+        fontSize: '0.75rem',
+        fontWeight: 700,
+        textTransform: 'uppercase',
+      }}
+    >
+      {children}
+    </span>
+  )
+}
+
+function Panel({
+  title,
+  icon,
+  muted,
+  children,
+}: {
+  title: string
+  icon: ReactNode
+  muted?: boolean
+  children: ReactNode
+}) {
+  return (
+    <section
+      style={{
+        backgroundColor: muted ? 'rgba(17, 17, 17, 0.45)' : C.bgPanel,
+        border: `1px solid ${C.borderSubtle}`,
+        borderRadius: '8px',
+        padding: '22px',
       }}
     >
       <div
         style={{
-          maxWidth: '1200px',
-          margin: '0 auto',
-          padding: '0 24px',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          color: C.accentGold,
+          marginBottom: '16px',
         }}
       >
-        {/* ==================== PROGRESS BAR ==================== */}
-        {step < 4 && (
-          <div style={{ marginBottom: '48px' }}>
-            {/* Step indicators */}
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                marginBottom: '12px',
-                position: 'relative',
-              }}
-            >
-              {(['CONFIGURE', 'DETAILS', 'PAYMENT'] as const).map(
-                (label, idx) => {
-                  const stepNum = (idx + 1) as Step
-                  const isActive = step === stepNum
-                  const isCompleted = step > stepNum
-                  return (
-                    <div
-                      key={label}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        flex: 1,
-                        justifyContent:
-                          idx === 0
-                            ? 'flex-start'
-                            : idx === 2
-                              ? 'flex-end'
-                              : 'center',
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: '12px',
-                          height: '12px',
-                          borderRadius: '50%',
-                          backgroundColor: isActive
-                            ? C.accentGold
-                            : isCompleted
-                              ? C.accentGold
-                              : C.borderSubtle,
-                          opacity: isCompleted ? 0.5 : 1,
-                          transform: isActive ? 'scale(1.2)' : 'scale(1)',
-                          transition: 'all 0.3s ease',
-                        }}
-                      />
-                      <span
-                        style={{
-                          fontFamily: "'JetBrains Mono', monospace",
-                          fontSize: '0.7rem',
-                          letterSpacing: '0.1em',
-                          color: isActive ? C.accentGold : C.textMuted,
-                          textTransform: 'uppercase',
-                        }}
-                      >
-                        {stepNum}. {label}
-                      </span>
-                    </div>
-                  )
-                }
-              )}
-            </div>
-            {/* Bar */}
-            <div
-              style={{
-                width: '100%',
-                height: '2px',
-                backgroundColor: C.borderSubtle,
-                position: 'relative',
-                overflow: 'hidden',
-              }}
-            >
-              <div
-                style={{
-                  height: '100%',
-                  backgroundColor: C.accentGold,
-                  transition: 'width 0.6s cubic-bezier(0.16, 1, 0.3, 1)',
-                  width: `${progressWidth}%`,
-                }}
-              />
-            </div>
-          </div>
-        )}
+        {icon}
+        <h2
+          style={{
+            color: C.textPrimary,
+            fontSize: '1rem',
+            fontWeight: 700,
+            margin: 0,
+            textTransform: 'uppercase',
+          }}
+        >
+          {title}
+        </h2>
+      </div>
+      {children}
+    </section>
+  )
+}
 
-        {/* ==================== MAIN LAYOUT ==================== */}
-        {step < 4 ? (
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '60% 40%',
-              gap: '48px',
-            }}
-            className="checkout-main-grid"
-          >
-            {/* LEFT COLUMN */}
-            <div className="checkout-step-content">
-              {/* ========================================= */}
-              {/* STEP 1: CONFIGURE                        */}
-              {/* ========================================= */}
-              {step === 1 && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                  <Step1Configure
-                    registration={registration}
-                    setRegistration={setRegistration}
-                    plateConfig={plateConfig}
-                    setPlateConfig={setPlateConfig}
-                    plateType={plateType}
-                    setPlateType={setPlateType}
-                    notes={notes}
-                    setNotes={setNotes}
-                    regValid={regValid}
-                    onContinue={() => setStep(2)}
-                  />
-                </div>
-              )}
-
-              {/* ========================================= */}
-              {/* STEP 2: DETAILS                          */}
-              {/* ========================================= */}
-              {step === 2 && (
-                <Step2Details
-                  customer={customer}
-                  setCustomer={setCustomer}
-                  deliveryMethod={deliveryMethod}
-                  setDeliveryMethod={setDeliveryMethod}
-                  plateType={plateType}
-                  uploadedFiles={uploadedFiles}
-                  onFileUpload={handleFileUpload}
-                  fileInputRef={fileInputRef}
-                  errors={errors}
-                  setErrors={setErrors}
-                  onBack={() => setStep(1)}
-                  onContinue={() => {
-                    if (step2Valid()) setStep(3)
-                  }}
-                />
-              )}
-
-              {/* ========================================= */}
-              {/* STEP 3: PAYMENT                          */}
-              {/* ========================================= */}
-              {step === 3 && (
-                <Step3Payment
-                  paymentMethod={paymentMethod}
-                  setPaymentMethod={setPaymentMethod}
-                  cardDetails={cardDetails}
-                  setCardDetails={setCardDetails}
-                  billingSameAsShipping={billingSameAsShipping}
-                  setBillingSameAsShipping={setBillingSameAsShipping}
-                  billingAddress={billingAddress}
-                  setBillingAddress={setBillingAddress}
-                  termsAccepted={termsAccepted}
-                  setTermsAccepted={setTermsAccepted}
-                  roadLegalConfirmed={roadLegalConfirmed}
-                  setRoadLegalConfirmed={setRoadLegalConfirmed}
-                  plateType={plateType}
-                  errors={errors}
-                  setErrors={setErrors}
-                  totalPrice={totalPrice}
-                  isSubmitting={isSubmitting}
-                  onBack={() => setStep(2)}
-                  onPlaceOrder={handlePlaceOrder}
-                />
-              )}
-            </div>
-
-            {/* RIGHT COLUMN — ORDER SUMMARY */}
-            <div
-              style={{
-                position: 'sticky',
-                top: '104px',
-                alignSelf: 'start',
-                height: 'fit-content',
-              }}
-              className="checkout-summary-col"
-            >
-              <OrderSummary
-                registration={registration}
-                plateConfig={plateConfig}
-                plateType={plateType}
-                platePrice={platePrice}
-                deliveryMethod={deliveryMethod}
-                deliveryPrice={deliveryPrice}
-                totalPrice={totalPrice}
-              />
-            </div>
-          </div>
-        ) : (
-          /* ========================================= */
-          /* STEP 4: ORDER CONFIRMATION               */
-          /* ========================================= */
-          <Step4Confirmation
-            orderNumber={orderNumber}
-            customerEmail={customer.email}
-            onContinueShopping={() => navigate('/')}
+function CartLineRow({
+  line,
+  disabled,
+  onRemove,
+  onQuantityChange,
+}: {
+  line: Cart['lines']['nodes'][number]
+  disabled: boolean
+  onRemove: () => void
+  onQuantityChange: (quantity: number) => void
+}) {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '72px 1fr auto',
+        gap: '14px',
+        alignItems: 'center',
+        border: `1px solid ${C.borderSubtle}`,
+        borderRadius: '8px',
+        padding: '12px',
+        backgroundColor: C.bgSurface,
+      }}
+    >
+      <div
+        style={{
+          width: '72px',
+          height: '72px',
+          borderRadius: '6px',
+          overflow: 'hidden',
+          backgroundColor: C.bgVoid,
+        }}
+      >
+        {line.merchandise.product.featuredImage?.url ? (
+          <img
+            src={line.merchandise.product.featuredImage.url}
+            alt={line.merchandise.product.title}
+            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
           />
+        ) : (
+          <div style={{ ...centerStyle, height: '100%', color: C.textMuted }}>PNP</div>
         )}
       </div>
+      <div style={{ minWidth: 0 }}>
+        <h3
+          style={{
+            margin: '0 0 5px',
+            color: C.textPrimary,
+            fontSize: '0.95rem',
+            textTransform: 'uppercase',
+          }}
+        >
+          {line.merchandise.product.title}
+        </h3>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+          {line.attributes.map((attr) => (
+            <span key={`${line.id}-${attr.key}`} style={attributePillStyle}>
+              {attr.key}: {attr.value}
+            </span>
+          ))}
+        </div>
+      </div>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'flex-end',
+          gap: '10px',
+        }}
+      >
+        <strong style={{ color: C.accentGold }}>
+          {formatMoney(line.cost.totalAmount.amount)}
+        </strong>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+          <IconButton
+            label="Decrease quantity"
+            disabled={disabled}
+            onClick={() => onQuantityChange(line.quantity - 1)}
+          >
+            <Minus size={14} />
+          </IconButton>
+          <span style={{ minWidth: '24px', textAlign: 'center' }}>{line.quantity}</span>
+          <IconButton
+            label="Increase quantity"
+            disabled={disabled}
+            onClick={() => onQuantityChange(line.quantity + 1)}
+          >
+            <Plus size={14} />
+          </IconButton>
+          <IconButton label="Remove item" disabled={disabled} onClick={onRemove}>
+            <X size={14} />
+          </IconButton>
+        </div>
+      </div>
+    </div>
+  )
+}
 
-      {/* Responsive CSS */}
+function InputField({
+  label,
+  value,
+  type = 'text',
+  error,
+  wide,
+  onChange,
+}: {
+  label: string
+  value: string
+  type?: string
+  error?: string
+  wide?: boolean
+  onChange: (value: string) => void
+}) {
+  return (
+    <label style={{ display: 'block', gridColumn: wide ? '1 / -1' : undefined }}>
+      <span style={labelStyle}>{label}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        style={{
+          ...inputStyle,
+          borderColor: error ? C.alertRed : C.borderSubtle,
+        }}
+      />
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+    </label>
+  )
+}
+
+function DocumentUpload({
+  label,
+  file,
+  onChange,
+}: {
+  label: string
+  file: File | null
+  onChange: (file: File | null) => void
+}) {
+  return (
+    <label
+      style={{
+        border: `2px dashed ${file ? C.successGreen : C.borderSubtle}`,
+        borderRadius: '8px',
+        padding: '20px',
+        minHeight: '148px',
+        backgroundColor: C.bgSurface,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '9px',
+        cursor: 'pointer',
+        textAlign: 'center',
+      }}
+    >
+      <input
+        type="file"
+        accept=".jpg,.jpeg,.png,.pdf"
+        onChange={(event) => onChange(event.target.files?.[0] ?? null)}
+        style={{ display: 'none' }}
+      />
+      {file ? (
+        <>
+          <FileCheck size={24} color={C.successGreen} />
+          <strong style={{ color: C.successGreen, fontSize: '0.85rem' }}>
+            {file.name}
+          </strong>
+          <span style={mutedText}>Click to replace</span>
+        </>
+      ) : (
+        <>
+          <Upload size={24} color={C.textMuted} />
+          <strong style={{ color: C.textPrimary, fontSize: '0.85rem' }}>{label}</strong>
+          <span style={mutedText}>PDF, JPG, or PNG under 10 MB</span>
+        </>
+      )}
+    </label>
+  )
+}
+
+function CheckboxRow({
+  checked,
+  label,
+  error,
+  onChange,
+}: {
+  checked: boolean
+  label: ReactNode
+  error?: string
+  onChange: (checked: boolean) => void
+}) {
+  return (
+    <div style={{ marginBottom: '12px' }}>
+      <button
+        type="button"
+        onClick={() => onChange(!checked)}
+        style={{
+          display: 'flex',
+          alignItems: 'flex-start',
+          gap: '12px',
+          width: '100%',
+          border: 'none',
+          background: 'transparent',
+          color: C.textMuted,
+          padding: 0,
+          cursor: 'pointer',
+          textAlign: 'left',
+        }}
+      >
+        <span
+          style={{
+            ...centerStyle,
+            width: '20px',
+            height: '20px',
+            borderRadius: '4px',
+            border: `2px solid ${error ? C.alertRed : checked ? C.accentGold : C.borderSubtle}`,
+            backgroundColor: checked ? C.accentGold : 'transparent',
+            flexShrink: 0,
+          }}
+        >
+          {checked && <Check size={14} color={C.bgVoid} strokeWidth={3} />}
+        </span>
+        <span style={{ fontSize: '0.9rem', lineHeight: 1.5 }}>{label}</span>
+      </button>
+      {error && <ErrorMessage>{error}</ErrorMessage>}
+    </div>
+  )
+}
+
+function ReviewPanel({
+  cart,
+  customer,
+  requiresDocuments,
+  proofOfId,
+  proofOfEntitlement,
+  isSubmitting,
+  errors,
+  onBack,
+  onContinue,
+}: {
+  cart: Cart
+  customer: CustomerDetails
+  requiresDocuments: boolean
+  proofOfId: File | null
+  proofOfEntitlement: File | null
+  isSubmitting: boolean
+  errors: ErrorMap
+  onBack: () => void
+  onContinue: () => void
+}) {
+  const metadataItems = cart.lines.nodes.map((line) => ({
+    line,
+    attributes: orderedReviewAttributes(line),
+  }))
+
+  return (
+    <Panel title="Final Review" icon={<Lock size={18} />}>
+      <div style={{ display: 'grid', gap: '16px' }}>
+        <ReviewBlock title="Customer">
+          <p style={reviewLineStyle}>{customer.fullName}</p>
+          <p style={reviewLineStyle}>{customer.email}</p>
+          <p style={reviewLineStyle}>{customer.phone}</p>
+          <p style={reviewLineStyle}>
+            {[customer.address1, customer.address2, customer.city, customer.postcode]
+              .filter(Boolean)
+              .join(', ')}
+          </p>
+        </ReviewBlock>
+
+        <ReviewBlock title="Cart Selections">
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {metadataItems.map(({ line, attributes }) => (
+              <MetadataItemSummary
+                key={line.id}
+                line={line}
+                attributes={attributes}
+                requiresDocuments={requiresDocuments}
+              />
+            ))}
+          </div>
+        </ReviewBlock>
+
+        <ReviewBlock title="DVLA Documents">
+          {requiresDocuments ? (
+            <div style={{ display: 'grid', gap: '8px' }}>
+              <DocumentSummary label="Proof of ID" file={proofOfId} />
+              <DocumentSummary
+                label="Proof of entitlement"
+                file={proofOfEntitlement}
+              />
+            </div>
+          ) : (
+            <p style={reviewLineStyle}>No DVLA documents required.</p>
+          )}
+        </ReviewBlock>
+
+        <div
+          style={{
+            border: `1px solid ${C.borderSubtle}`,
+            borderRadius: '8px',
+            padding: '16px',
+            backgroundColor: C.bgSurface,
+            display: 'flex',
+            gap: '12px',
+            alignItems: 'flex-start',
+          }}
+        >
+          <Lock size={18} color={C.accentGold} style={{ flexShrink: 0 }} />
+          <p style={{ ...mutedText, margin: 0 }}>
+            Payment, shipping rates, and final order confirmation happen inside
+            Shopify checkout. We do not store card details on this site.
+          </p>
+        </div>
+
+        {errors.submit && (
+          <div
+            style={{
+              border: `1px solid ${C.alertRed}`,
+              borderRadius: '8px',
+              padding: '12px',
+              color: C.alertRed,
+              display: 'flex',
+              gap: '10px',
+              alignItems: 'center',
+            }}
+          >
+            <AlertCircle size={18} />
+            {errors.submit}
+          </div>
+        )}
+
+        <div
+          style={{
+            display: 'flex',
+            gap: '12px',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+          }}
+        >
+          <SecondaryButton onClick={onBack}>Back To Details</SecondaryButton>
+          <PrimaryButton onClick={onContinue} disabled={isSubmitting}>
+            {isSubmitting ? (
+              <>
+                <Loader size={18} className="checkout-spin" />
+                Preparing Shopify Checkout
+              </>
+            ) : (
+              <>
+                Continue To Shopify <ChevronRight size={18} />
+              </>
+            )}
+          </PrimaryButton>
+        </div>
+      </div>
       <style>{`
-        .checkout-main-grid {
-          grid-template-columns: 60% 40%;
+        .checkout-spin {
+          animation: checkout-spin 1s linear infinite;
         }
-        @media (max-width: 1024px) {
-          .checkout-main-grid {
-            grid-template-columns: 1fr;
-          }
-          .checkout-summary-col {
-            position: relative !important;
-            top: 0 !important;
-            order: -1;
-          }
-        }
-        @media (max-width: 768px) {
-          .checkout-main-grid {
-            grid-template-columns: 1fr;
-            gap: 32px;
-          }
-        }
-        .spin-loader {
-          animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
+        @keyframes checkout-spin {
           from { transform: rotate(0deg); }
           to { transform: rotate(360deg); }
         }
       `}</style>
-    </div>
+    </Panel>
   )
 }
 
-/* ================================================================== */
-/*  STEP 1: CONFIGURE                                                */
-/* ================================================================== */
-function Step1Configure({
-  registration,
-  setRegistration,
-  plateConfig,
-  setPlateConfig,
-  plateType,
-  setPlateType,
-  notes,
-  setNotes,
-  regValid,
-  onContinue,
+function ReviewBlock({
+  title,
+  children,
 }: {
-  registration: string
-  setRegistration: (v: string) => void
-  plateConfig: PlateConfig
-  setPlateConfig: (v: PlateConfig) => void
-  plateType: PlateType
-  setPlateType: (v: PlateType) => void
-  notes: string
-  setNotes: (v: string) => void
-  regValid: boolean
-  onContinue: () => void
-}) {
-  return (
-    <>
-      {/* Plate Preview */}
-      <div>
-        <label
-          style={{
-            fontFamily: "'JetBrains Mono', monospace",
-            fontSize: '0.7rem',
-            letterSpacing: '0.1em',
-            color: C.accentGold,
-            textTransform: 'uppercase',
-            display: 'block',
-            marginBottom: '12px',
-          }}
-        >
-          LIVE PREVIEW
-        </label>
-        <PlatePreview registration={registration} />
-      </div>
-
-      {/* Registration Input */}
-      <div>
-        <SectionLabel>YOUR REGISTRATION</SectionLabel>
-        <div style={{ position: 'relative' }}>
-          <input
-            type="text"
-            value={registration}
-            onChange={(e) =>
-              setRegistration(e.target.value.toUpperCase())
-            }
-            placeholder="AB12 CDE"
-            style={{
-              width: '100%',
-              padding: '16px',
-              paddingRight: '48px',
-              backgroundColor: C.bgSurface,
-              border: `1px solid ${regValid ? C.successGreen : C.borderSubtle}`,
-              borderRadius: '8px',
-              color: C.textPrimary,
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: '1.25rem',
-              letterSpacing: '0.15em',
-              textTransform: 'uppercase',
-              outline: 'none',
-              transition: 'border-color 0.3s ease',
-            }}
-          />
-          {regValid && (
-            <div
-              style={{
-                position: 'absolute',
-                right: '16px',
-                top: '50%',
-                transform: 'translateY(-50%)',
-              }}
-            >
-              <Check size={20} color={C.successGreen} strokeWidth={2.5} />
-            </div>
-          )}
-        </div>
-        <p
-          style={{
-            fontSize: '0.875rem',
-            color: C.textMuted,
-            marginTop: '8px',
-            lineHeight: 1.5,
-          }}
-        >
-          Enter your registration exactly as it appears on your V5C document.
-        </p>
-      </div>
-
-      {/* Plate Configuration */}
-      <div>
-        <SectionLabel>PLATE CONFIGURATION</SectionLabel>
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-          }}
-        >
-          {(
-            [
-              { value: 'front-rear', label: 'FRONT & REAR', price: '£59.99' },
-              { value: 'front-only', label: 'FRONT ONLY', price: '£34.99' },
-              { value: 'rear-only', label: 'REAR ONLY', price: '£34.99' },
-            ] as { value: PlateConfig; label: string; price: string }[]
-          ).map((opt) => (
-            <RadioCard
-              key={opt.value}
-              selected={plateConfig === opt.value}
-              onClick={() => setPlateConfig(opt.value)}
-            >
-              <span style={{ fontWeight: 500 }}>{opt.label}</span>
-              <span
-                style={{
-                  fontFamily: "'JetBrains Mono', monospace",
-                  color: C.accentGold,
-                  fontSize: '0.9rem',
-                }}
-              >
-                — {opt.price}
-              </span>
-            </RadioCard>
-          ))}
-        </div>
-      </div>
-
-      {/* Plate Type Toggle */}
-      <div>
-        <SectionLabel>PLATE TYPE</SectionLabel>
-        <div
-          style={{
-            display: 'flex',
-            borderRadius: '8px',
-            overflow: 'hidden',
-            border: `1px solid ${C.borderSubtle}`,
-          }}
-        >
-          {(['road-legal', 'show-plate'] as const).map((type) => (
-            <button
-              key={type}
-              onClick={() => setPlateType(type)}
-              style={{
-                flex: 1,
-                padding: '14px 16px',
-                backgroundColor:
-                  plateType === type ? C.accentGold : C.bgSurface,
-                color:
-                  plateType === type ? C.bgVoid : C.textMuted,
-                border: 'none',
-                cursor: 'pointer',
-                fontFamily: "'Inter', system-ui, sans-serif",
-                fontWeight: plateType === type ? 600 : 400,
-                fontSize: '0.875rem',
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                transition: 'all 0.2s ease',
-              }}
-            >
-              {type === 'road-legal' ? 'ROAD LEGAL' : 'SHOW PLATE'}
-            </button>
-          ))}
-        </div>
-        {plateType === 'show-plate' && (
-          <p
-            style={{
-              fontSize: '0.8rem',
-              color: C.alertRed,
-              marginTop: '8px',
-            }}
-          >
-            Show plates are not road legal. For off-road/show use only.
-          </p>
-        )}
-      </div>
-
-      {/* Notes */}
-      <div>
-        <SectionLabel>ADDITIONAL NOTES</SectionLabel>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Any special requirements or requests..."
-          rows={4}
-          style={{
-            width: '100%',
-            padding: '16px',
-            backgroundColor: C.bgSurface,
-            border: `1px solid ${C.borderSubtle}`,
-            borderRadius: '8px',
-            color: C.textPrimary,
-            fontFamily: "'Inter', system-ui, sans-serif",
-            fontSize: '1rem',
-            lineHeight: 1.5,
-            outline: 'none',
-            resize: 'vertical',
-            transition: 'border-color 0.3s ease',
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = C.accentGold
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = C.borderSubtle
-          }}
-        />
-      </div>
-
-      {/* Continue Button */}
-      <PrimaryButton
-        onClick={onContinue}
-        disabled={!regValid}
-        fullWidth
-      >
-        CONTINUE TO DETAILS
-        <ChevronRight size={18} />
-      </PrimaryButton>
-    </>
-  )
-}
-
-/* ================================================================== */
-/*  STEP 2: DETAILS                                                  */
-/* ================================================================== */
-function Step2Details({
-  customer,
-  setCustomer,
-  deliveryMethod,
-  setDeliveryMethod,
-  plateType,
-  uploadedFiles,
-  onFileUpload,
-  fileInputRef,
-  errors,
-  setErrors,
-  onBack,
-  onContinue,
-}: {
-  customer: CustomerDetails
-  setCustomer: React.Dispatch<React.SetStateAction<CustomerDetails>>
-  deliveryMethod: DeliveryMethod
-  setDeliveryMethod: (v: DeliveryMethod) => void
-  plateType: PlateType
-  uploadedFiles: File[]
-  onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
-  fileInputRef: React.RefObject<HTMLInputElement | null>
-  errors: Record<string, string>
-  setErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>
-  onBack: () => void
-  onContinue: () => void
-}) {
-  const updateField = (field: keyof CustomerDetails, value: string) => {
-    setCustomer((prev) => ({ ...prev, [field]: value }))
-    if (errors[field]) {
-      setErrors((prev) => {
-        const copy = { ...prev }
-        delete copy[field]
-        return copy
-      })
-    }
-  }
-
-  const inputStyle = (field: string): React.CSSProperties => ({
-    width: '100%',
-    padding: '12px 16px',
-    backgroundColor: C.bgSurface,
-    border: `1px solid ${errors[field] ? C.alertRed : C.borderSubtle}`,
-    borderRadius: '8px',
-    color: C.textPrimary,
-    fontFamily: "'Inter', system-ui, sans-serif",
-    fontSize: '1rem',
-    outline: 'none',
-    transition: 'border-color 0.3s ease',
-  })
-
-  return (
-    <>
-      <div>
-        <SectionLabel>EMAIL ADDRESS</SectionLabel>
-        <input
-          type="email"
-          value={customer.email}
-          onChange={(e) => updateField('email', e.target.value)}
-          placeholder="you@example.com"
-          style={inputStyle('email')}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor =
-              errors.email ? C.alertRed : C.accentGold
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor =
-              errors.email ? C.alertRed : C.borderSubtle
-          }}
-        />
-        {errors.email && (
-          <ErrorMessage>{errors.email}</ErrorMessage>
-        )}
-      </div>
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '24px',
-        }}
-        className="form-grid-2"
-      >
-        <div>
-          <SectionLabel>FULL NAME</SectionLabel>
-          <input
-            type="text"
-            value={customer.fullName}
-            onChange={(e) => updateField('fullName', e.target.value)}
-            placeholder="John Smith"
-            style={inputStyle('fullName')}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = C.accentGold
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = errors.fullName
-                ? C.alertRed
-                : C.borderSubtle
-            }}
-          />
-          {errors.fullName && <ErrorMessage>{errors.fullName}</ErrorMessage>}
-        </div>
-        <div>
-          <SectionLabel>
-            PHONE NUMBER{' '}
-            <span style={{ color: C.textMuted }}>(OPTIONAL)</span>
-          </SectionLabel>
-          <input
-            type="tel"
-            value={customer.phone}
-            onChange={(e) => updateField('phone', e.target.value)}
-            placeholder="+44 7123 456789"
-            style={inputStyle('phone')}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = C.accentGold
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = C.borderSubtle
-            }}
-          />
-        </div>
-      </div>
-
-      <div>
-        <SectionLabel>ADDRESS LINE 1</SectionLabel>
-        <input
-          type="text"
-          value={customer.address1}
-          onChange={(e) => updateField('address1', e.target.value)}
-          placeholder="123 Main Street"
-          style={inputStyle('address1')}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = C.accentGold
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = errors.address1
-              ? C.alertRed
-              : C.borderSubtle
-          }}
-        />
-        {errors.address1 && <ErrorMessage>{errors.address1}</ErrorMessage>}
-      </div>
-
-      <div>
-        <SectionLabel>
-          ADDRESS LINE 2{' '}
-          <span style={{ color: C.textMuted }}>(OPTIONAL)</span>
-        </SectionLabel>
-        <input
-          type="text"
-          value={customer.address2}
-          onChange={(e) => updateField('address2', e.target.value)}
-          placeholder="Apt 4B"
-          style={inputStyle('address2')}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = C.accentGold
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = C.borderSubtle
-          }}
-        />
-      </div>
-
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '2fr 1fr 1fr',
-          gap: '16px',
-        }}
-        className="form-grid-3"
-      >
-        <div>
-          <SectionLabel>CITY</SectionLabel>
-          <input
-            type="text"
-            value={customer.city}
-            onChange={(e) => updateField('city', e.target.value)}
-            placeholder="London"
-            style={inputStyle('city')}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = C.accentGold
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = errors.city
-                ? C.alertRed
-                : C.borderSubtle
-            }}
-          />
-          {errors.city && <ErrorMessage>{errors.city}</ErrorMessage>}
-        </div>
-        <div>
-          <SectionLabel>POSTCODE</SectionLabel>
-          <input
-            type="text"
-            value={customer.postcode}
-            onChange={(e) =>
-              updateField('postcode', e.target.value.toUpperCase())
-            }
-            placeholder="SW1A 1AA"
-            style={{
-              ...inputStyle('postcode'),
-              textTransform: 'uppercase',
-            }}
-            onFocus={(e) => {
-              e.currentTarget.style.borderColor = C.accentGold
-            }}
-            onBlur={(e) => {
-              e.currentTarget.style.borderColor = errors.postcode
-                ? C.alertRed
-                : C.borderSubtle
-            }}
-          />
-          {errors.postcode && (
-            <ErrorMessage>{errors.postcode}</ErrorMessage>
-          )}
-        </div>
-        <div>
-          <SectionLabel>COUNTRY</SectionLabel>
-          <select
-            value={customer.country}
-            onChange={(e) => updateField('country', e.target.value)}
-            style={{
-              width: '100%',
-              padding: '12px 16px',
-              backgroundColor: C.bgSurface,
-              border: `1px solid ${C.borderSubtle}`,
-              borderRadius: '8px',
-              color: C.textPrimary,
-              fontFamily: "'Inter', system-ui, sans-serif",
-              fontSize: '1rem',
-              outline: 'none',
-              cursor: 'pointer',
-            }}
-          >
-            <option value="United Kingdom">United Kingdom</option>
-            <option value="Ireland">Ireland</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Delivery Method */}
-      <div>
-        <SectionLabel>DELIVERY METHOD</SectionLabel>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <RadioCard
-            selected={deliveryMethod === 'standard'}
-            onClick={() => setDeliveryMethod('standard')}
-          >
-            <span style={{ fontWeight: 500 }}>STANDARD DELIVERY</span>
-            <span style={{ color: C.successGreen, fontWeight: 500 }}>
-              FREE
-            </span>
-            <span style={{ color: C.textMuted, fontSize: '0.8rem' }}>
-              3-5 working days
-            </span>
-          </RadioCard>
-          <RadioCard
-            selected={deliveryMethod === 'express'}
-            onClick={() => setDeliveryMethod('express')}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Zap size={16} color={C.accentGold} />
-              <span style={{ fontWeight: 500 }}>EXPRESS DELIVERY</span>
-            </div>
-            <span
-              style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                color: C.accentGold,
-                fontSize: '0.9rem',
-              }}
-            >
-              £6.99
-            </span>
-            <span style={{ color: C.textMuted, fontSize: '0.8rem' }}>
-              Next working day
-            </span>
-          </RadioCard>
-        </div>
-      </div>
-
-      {/* DVLA Document Upload */}
-      {plateType === 'road-legal' && (
-        <div>
-          <SectionLabel>DVLA DOCUMENTS</SectionLabel>
-          <div
-            onClick={() => fileInputRef.current?.click()}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault()
-              if (e.dataTransfer.files.length > 0) {
-                const dt = new DataTransfer()
-                Array.from(e.dataTransfer.files).forEach((f) => dt.items.add(f))
-                const syntheticEvent = {
-                  currentTarget: {
-                    files: dt.files,
-                  },
-                } as React.ChangeEvent<HTMLInputElement>
-                onFileUpload(syntheticEvent)
-              }
-            }}
-            style={{
-              border: `2px dashed ${errors.documents ? C.alertRed : C.borderSubtle}`,
-              borderRadius: '8px',
-              padding: '40px',
-              textAlign: 'center',
-              cursor: 'pointer',
-              transition: 'all 0.3s ease',
-              backgroundColor: uploadedFiles.length > 0
-                ? 'rgba(79, 138, 79, 0.05)'
-                : 'transparent',
-            }}
-            onMouseEnter={(e) => {
-              if (uploadedFiles.length === 0) {
-                e.currentTarget.style.borderColor = C.accentGold
-                e.currentTarget.style.backgroundColor =
-                  'rgba(255, 215, 0, 0.05)'
-              }
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.borderColor = errors.documents
-                ? C.alertRed
-                : C.borderSubtle
-              e.currentTarget.style.backgroundColor =
-                uploadedFiles.length > 0
-                  ? 'rgba(79, 138, 79, 0.05)'
-                  : 'transparent'
-            }}
-          >
-            <input
-              ref={fileInputRef}
-              type="file"
-              multiple
-              accept=".pdf,.jpg,.jpeg,.png"
-              onChange={onFileUpload}
-              style={{ display: 'none' }}
-            />
-            {uploadedFiles.length > 0 ? (
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  color: C.successGreen,
-                }}
-              >
-                <Check size={20} strokeWidth={2.5} />
-                <span style={{ fontWeight: 500 }}>
-                  {uploadedFiles.map((f) => f.name).join(', ')}
-                </span>
-              </div>
-            ) : (
-              <>
-                <Upload
-                  size={32}
-                  color={C.textMuted}
-                  style={{ marginBottom: '12px' }}
-                />
-                <p style={{ color: C.textMuted, fontSize: '1rem' }}>
-                  Drag &amp; drop or click to upload
-                </p>
-                <p
-                  style={{
-                    color: C.textMuted,
-                    fontSize: '0.75rem',
-                    marginTop: '8px',
-                  }}
-                >
-                  V5C, V5C/2, or V948 — PDF, JPG, PNG up to 5MB
-                </p>
-              </>
-            )}
-          </div>
-          {errors.documents && (
-            <ErrorMessage>{errors.documents}</ErrorMessage>
-          )}
-        </div>
-      )}
-
-      {/* Navigation */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '16px',
-          marginTop: '16px',
-        }}
-      >
-        <SecondaryButton onClick={onBack} style={{ flex: 1 }}>
-          BACK
-        </SecondaryButton>
-        <PrimaryButton onClick={onContinue} style={{ flex: 1 }}>
-          CONTINUE TO PAYMENT
-        </PrimaryButton>
-      </div>
-
-      <style>{`
-        .form-grid-2 {
-          grid-template-columns: 1fr 1fr;
-        }
-        .form-grid-3 {
-          grid-template-columns: 2fr 1fr 1fr;
-        }
-        @media (max-width: 768px) {
-          .form-grid-2 {
-            grid-template-columns: 1fr;
-          }
-          .form-grid-3 {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
-    </>
-  )
-}
-
-/* ================================================================== */
-/*  STEP 3: PAYMENT                                                  */
-/* ================================================================== */
-function Step3Payment({
-  paymentMethod,
-  setPaymentMethod,
-  cardDetails,
-  setCardDetails,
-  billingSameAsShipping,
-  setBillingSameAsShipping,
-  billingAddress,
-  setBillingAddress,
-  termsAccepted,
-  setTermsAccepted,
-  roadLegalConfirmed,
-  setRoadLegalConfirmed,
-  plateType,
-  errors,
-  setErrors,
-  totalPrice,
-  isSubmitting,
-  onBack,
-  onPlaceOrder,
-}: {
-  paymentMethod: PaymentMethod
-  setPaymentMethod: (v: PaymentMethod) => void
-  cardDetails: CardDetails
-  setCardDetails: React.Dispatch<React.SetStateAction<CardDetails>>
-  billingSameAsShipping: boolean
-  setBillingSameAsShipping: (v: boolean) => void
-  billingAddress: CustomerDetails
-  setBillingAddress: React.Dispatch<React.SetStateAction<CustomerDetails>>
-  termsAccepted: boolean
-  setTermsAccepted: (v: boolean) => void
-  roadLegalConfirmed: boolean
-  setRoadLegalConfirmed: (v: boolean) => void
-  plateType: PlateType
-  errors: Record<string, string>
-  setErrors: React.Dispatch<React.SetStateAction<Record<string, string>>>
-  totalPrice: number
-  isSubmitting: boolean
-  onBack: () => void
-  onPlaceOrder: () => void
-}) {
-  const updateCard = (field: keyof CardDetails, value: string) => {
-    if (field === 'number') value = formatCardNumber(value)
-    if (field === 'expiryMonth') value = value.replace(/\D/g, '').slice(0, 2)
-    if (field === 'expiryYear') value = value.replace(/\D/g, '').slice(0, 2)
-    if (field === 'cvc') value = value.replace(/\D/g, '').slice(0, 4)
-    setCardDetails((prev) => ({ ...prev, [field]: value }))
-  }
-
-  const inputStyle = (field: string): React.CSSProperties => ({
-    width: '100%',
-    padding: '12px 16px',
-    backgroundColor: C.bgSurface,
-    border: `1px solid ${errors[field] ? C.alertRed : C.borderSubtle}`,
-    borderRadius: '8px',
-    color: C.textPrimary,
-    fontFamily: "'Inter', system-ui, sans-serif",
-    fontSize: '1rem',
-    outline: 'none',
-    transition: 'border-color 0.3s ease',
-  })
-
-  return (
-    <>
-      {/* Payment Method Selection */}
-      <div>
-        <SectionLabel>PAYMENT METHOD</SectionLabel>
-        <div
-          style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}
-        >
-          {(
-            [
-              {
-                value: 'card' as const,
-                label: 'CREDIT / DEBIT CARD',
-                icon: <CreditCard size={20} color={C.accentGold} />,
-              },
-              {
-                value: 'paypal' as const,
-                label: 'PAYPAL',
-                icon: (
-                  <span
-                    style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      color: '#0070BA',
-                    }}
-                  >
-                    PP
-                  </span>
-                ),
-              },
-              {
-                value: 'clearpay' as const,
-                label: 'CLEARPAY',
-                icon: (
-                  <span
-                    style={{
-                      fontFamily: "'JetBrains Mono', monospace",
-                      fontSize: '0.75rem',
-                      fontWeight: 700,
-                      color: C.textPrimary,
-                    }}
-                  >
-                    CP
-                  </span>
-                ),
-              },
-            ] as const
-          ).map((opt) => (
-            <RadioCard
-              key={opt.value}
-              selected={paymentMethod === opt.value}
-              onClick={() => setPaymentMethod(opt.value)}
-            >
-              <div
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '10px',
-                }}
-              >
-                {opt.icon}
-                <span style={{ fontWeight: 500 }}>{opt.label}</span>
-              </div>
-            </RadioCard>
-          ))}
-        </div>
-      </div>
-
-      {/* Card Details */}
-      {paymentMethod === 'card' && (
-        <div
-          style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
-        >
-          <div>
-            <SectionLabel>CARD NUMBER</SectionLabel>
-            <input
-              type="text"
-              value={cardDetails.number}
-              onChange={(e) => updateCard('number', e.target.value)}
-              placeholder="0000 0000 0000 0000"
-              style={{
-                ...inputStyle('cardNumber'),
-                fontFamily: "'JetBrains Mono', monospace",
-                letterSpacing: '0.1em',
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = C.accentGold
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = errors.cardNumber
-                  ? C.alertRed
-                  : C.borderSubtle
-              }}
-            />
-            {errors.cardNumber && (
-              <ErrorMessage>{errors.cardNumber}</ErrorMessage>
-            )}
-          </div>
-
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr 1fr',
-              gap: '16px',
-            }}
-            className="card-grid"
-          >
-            <div>
-              <SectionLabel>MM</SectionLabel>
-              <input
-                type="text"
-                value={cardDetails.expiryMonth}
-                onChange={(e) =>
-                  updateCard('expiryMonth', e.target.value)
-                }
-                placeholder="MM"
-                style={{
-                  ...inputStyle('expiryMonth'),
-                  fontFamily: "'JetBrains Mono', monospace",
-                  textAlign: 'center',
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = C.accentGold
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = errors.expiryMonth
-                    ? C.alertRed
-                    : C.borderSubtle
-                }}
-              />
-            </div>
-            <div>
-              <SectionLabel>YY</SectionLabel>
-              <input
-                type="text"
-                value={cardDetails.expiryYear}
-                onChange={(e) =>
-                  updateCard('expiryYear', e.target.value)
-                }
-                placeholder="YY"
-                style={{
-                  ...inputStyle('expiryYear'),
-                  fontFamily: "'JetBrains Mono', monospace",
-                  textAlign: 'center',
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = C.accentGold
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = errors.expiryYear
-                    ? C.alertRed
-                    : C.borderSubtle
-                }}
-              />
-            </div>
-            <div>
-              <SectionLabel>CVC</SectionLabel>
-              <input
-                type="text"
-                value={cardDetails.cvc}
-                onChange={(e) => updateCard('cvc', e.target.value)}
-                placeholder="123"
-                style={{
-                  ...inputStyle('cvc'),
-                  fontFamily: "'JetBrains Mono', monospace",
-                  textAlign: 'center',
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = C.accentGold
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = errors.cvc
-                    ? C.alertRed
-                    : C.borderSubtle
-                }}
-              />
-              {errors.cvc && <ErrorMessage>{errors.cvc}</ErrorMessage>}
-            </div>
-          </div>
-
-          <div>
-            <SectionLabel>NAME ON CARD</SectionLabel>
-            <input
-              type="text"
-              value={cardDetails.name}
-              onChange={(e) => updateCard('name', e.target.value)}
-              placeholder="JOHN SMITH"
-              style={{
-                ...inputStyle('cardName'),
-                textTransform: 'uppercase',
-              }}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = C.accentGold
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = errors.cardName
-                  ? C.alertRed
-                  : C.borderSubtle
-              }}
-            />
-            {errors.cardName && (
-              <ErrorMessage>{errors.cardName}</ErrorMessage>
-            )}
-          </div>
-
-          <style>{`
-            .card-grid {
-              grid-template-columns: 1fr 1fr 1fr;
-            }
-            @media (max-width: 768px) {
-              .card-grid {
-                grid-template-columns: 1fr 1fr 1fr;
-              }
-            }
-          `}</style>
-        </div>
-      )}
-
-      {paymentMethod === 'paypal' && (
-        <div
-          style={{
-            padding: '24px',
-            backgroundColor: C.bgSurface,
-            borderRadius: '8px',
-            border: `1px solid ${C.borderSubtle}`,
-          }}
-        >
-          <p style={{ color: C.textMuted, fontSize: '1rem' }}>
-            You will be redirected to PayPal to complete your purchase.
-          </p>
-        </div>
-      )}
-
-      {paymentMethod === 'clearpay' && (
-        <div
-          style={{
-            padding: '24px',
-            backgroundColor: C.bgSurface,
-            borderRadius: '8px',
-            border: `1px solid ${C.borderSubtle}`,
-          }}
-        >
-          <p style={{ color: C.textMuted, fontSize: '1rem' }}>
-            Pay in 4 interest-free instalments with Clearpay. You will be
-            redirected to complete your purchase.
-          </p>
-        </div>
-      )}
-
-      {/* Billing Address */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          padding: '16px',
-          backgroundColor: C.bgSurface,
-          borderRadius: '8px',
-          border: `1px solid ${C.borderSubtle}`,
-          cursor: 'pointer',
-        }}
-        onClick={() => setBillingSameAsShipping(!billingSameAsShipping)}
-      >
-        <div
-          style={{
-            width: '20px',
-            height: '20px',
-            borderRadius: '4px',
-            border: `2px solid ${billingSameAsShipping ? C.accentGold : C.borderSubtle}`,
-            backgroundColor: billingSameAsShipping
-              ? C.accentGold
-              : 'transparent',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            transition: 'all 0.2s ease',
-            flexShrink: 0,
-          }}
-        >
-          {billingSameAsShipping && (
-            <Check size={14} color={C.bgVoid} strokeWidth={3} />
-          )}
-        </div>
-        <span
-          style={{
-            fontSize: '0.95rem',
-            color: C.textMuted,
-            userSelect: 'none',
-          }}
-        >
-          Same as shipping address
-        </span>
-      </div>
-
-      {!billingSameAsShipping && (
-        <div
-          style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}
-        >
-          <div>
-            <SectionLabel>BILLING FULL NAME</SectionLabel>
-            <input
-              type="text"
-              value={billingAddress.fullName}
-              onChange={(e) =>
-                setBillingAddress((prev) => ({
-                  ...prev,
-                  fullName: e.target.value,
-                }))
-              }
-              placeholder="John Smith"
-              style={inputStyle('billingFullName')}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = C.accentGold
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = errors.billingFullName
-                  ? C.alertRed
-                  : C.borderSubtle
-              }}
-            />
-          </div>
-          <div>
-            <SectionLabel>BILLING ADDRESS</SectionLabel>
-            <input
-              type="text"
-              value={billingAddress.address1}
-              onChange={(e) =>
-                setBillingAddress((prev) => ({
-                  ...prev,
-                  address1: e.target.value,
-                }))
-              }
-              placeholder="123 Main Street"
-              style={inputStyle('billingAddress1')}
-              onFocus={(e) => {
-                e.currentTarget.style.borderColor = C.accentGold
-              }}
-              onBlur={(e) => {
-                e.currentTarget.style.borderColor = errors.billingAddress1
-                  ? C.alertRed
-                  : C.borderSubtle
-              }}
-            />
-          </div>
-          <div
-            style={{
-              display: 'grid',
-              gridTemplateColumns: '1fr 1fr',
-              gap: '16px',
-            }}
-          >
-            <div>
-              <SectionLabel>BILLING CITY</SectionLabel>
-              <input
-                type="text"
-                value={billingAddress.city}
-                onChange={(e) =>
-                  setBillingAddress((prev) => ({
-                    ...prev,
-                    city: e.target.value,
-                  }))
-                }
-                placeholder="London"
-                style={inputStyle('billingCity')}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = C.accentGold
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = errors.billingCity
-                    ? C.alertRed
-                    : C.borderSubtle
-                }}
-              />
-            </div>
-            <div>
-              <SectionLabel>BILLING POSTCODE</SectionLabel>
-              <input
-                type="text"
-                value={billingAddress.postcode}
-                onChange={(e) =>
-                  setBillingAddress((prev) => ({
-                    ...prev,
-                    postcode: e.target.value.toUpperCase(),
-                  }))
-                }
-                placeholder="SW1A 1AA"
-                style={{
-                  ...inputStyle('billingPostcode'),
-                  textTransform: 'uppercase',
-                }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = C.accentGold
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = errors.billingPostcode
-                    ? C.alertRed
-                    : C.borderSubtle
-                }}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Terms */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: '12px',
-            cursor: 'pointer',
-          }}
-          onClick={() => {
-            setTermsAccepted(!termsAccepted)
-            if (errors.terms) {
-              setErrors((prev) => {
-                const copy = { ...prev }
-                delete copy.terms
-                return copy
-              })
-            }
-          }}
-        >
-          <div
-            style={{
-              width: '20px',
-              height: '20px',
-              borderRadius: '4px',
-              border: `2px solid ${termsAccepted ? C.accentGold : errors.terms ? C.alertRed : C.borderSubtle}`,
-              backgroundColor: termsAccepted ? C.accentGold : 'transparent',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s ease',
-              flexShrink: 0,
-              marginTop: '2px',
-            }}
-          >
-            {termsAccepted && (
-              <Check size={14} color={C.bgVoid} strokeWidth={3} />
-            )}
-          </div>
-          <span style={{ fontSize: '0.9rem', color: C.textMuted }}>
-            I agree to the{' '}
-            <span
-              style={{
-                color: C.accentGold,
-                textDecoration: 'underline',
-              }}
-            >
-              Terms of Service
-            </span>{' '}
-            and{' '}
-            <span
-              style={{
-                color: C.accentGold,
-                textDecoration: 'underline',
-              }}
-            >
-              Privacy Policy
-            </span>
-          </span>
-        </div>
-        {errors.terms && <ErrorMessage>{errors.terms}</ErrorMessage>}
-
-        {plateType === 'road-legal' && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'flex-start',
-              gap: '12px',
-              cursor: 'pointer',
-            }}
-            onClick={() => {
-              setRoadLegalConfirmed(!roadLegalConfirmed)
-              if (errors.roadLegal) {
-                setErrors((prev) => {
-                  const copy = { ...prev }
-                  delete copy.roadLegal
-                  return copy
-                })
-              }
-            }}
-          >
-            <div
-              style={{
-                width: '20px',
-                height: '20px',
-                borderRadius: '4px',
-                border: `2px solid ${roadLegalConfirmed ? C.accentGold : errors.roadLegal ? C.alertRed : C.borderSubtle}`,
-                backgroundColor: roadLegalConfirmed
-                  ? C.accentGold
-                  : 'transparent',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s ease',
-                flexShrink: 0,
-                marginTop: '2px',
-              }}
-            >
-              {roadLegalConfirmed && (
-                <Check size={14} color={C.bgVoid} strokeWidth={3} />
-              )}
-            </div>
-            <span style={{ fontSize: '0.9rem', color: C.textMuted }}>
-              I confirm this is a DVLA-compliant road legal plate order.
-            </span>
-          </div>
-        )}
-        {errors.roadLegal && (
-          <ErrorMessage>{errors.roadLegal}</ErrorMessage>
-        )}
-      </div>
-
-      {/* Submit error */}
-      {errors.submit && (
-        <div
-          style={{
-            marginBottom: '16px',
-            padding: '12px 16px',
-            borderRadius: '8px',
-            backgroundColor: 'rgba(217, 83, 79, 0.1)',
-            border: `1px solid ${C.alertRed}`,
-            color: C.alertRed,
-            fontSize: '0.875rem',
-          }}
-        >
-          {errors.submit}
-        </div>
-      )}
-
-      {/* Pay Button */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '16px',
-          marginTop: '8px',
-        }}
-      >
-        <SecondaryButton onClick={onBack} style={{ flex: 1 }}>
-          BACK
-        </SecondaryButton>
-        <button
-          onClick={onPlaceOrder}
-          disabled={isSubmitting}
-          style={{
-            flex: 1,
-            padding: '16px 32px',
-            borderRadius: '9999px',
-            backgroundColor: isSubmitting ? C.successGreen : C.accentGold,
-            color: C.bgVoid,
-            fontFamily: "'Inter', system-ui, sans-serif",
-            fontWeight: 700,
-            fontSize: '1.25rem',
-            letterSpacing: '-0.72px',
-            textTransform: 'uppercase',
-            border: 'none',
-            cursor: isSubmitting ? 'default' : 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '8px',
-            transition: 'all 0.3s ease',
-            transform: 'translateY(0)',
-          }}
-          onMouseEnter={(e) => {
-            if (!isSubmitting) {
-              e.currentTarget.style.transform = 'translateY(-2px)'
-              e.currentTarget.style.boxShadow =
-                '0 0 40px rgba(255, 215, 0, 0.2)'
-            }
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.transform = 'translateY(0)'
-            e.currentTarget.style.boxShadow = 'none'
-          }}
-        >
-          {isSubmitting ? (
-            <>
-              <Loader size={20} className="spin-loader" />
-              PROCESSING...
-            </>
-          ) : (
-            <>PAY £{totalPrice.toFixed(2)}</>
-          )}
-        </button>
-      </div>
-    </>
-  )
-}
-
-/* ================================================================== */
-/*  STEP 4: ORDER CONFIRMATION                                       */
-/* ================================================================== */
-function Step4Confirmation({
-  orderNumber,
-  customerEmail,
-  onContinueShopping,
-}: {
-  orderNumber: string
-  customerEmail: string
-  onContinueShopping: () => void
+  title: string
+  children: ReactNode
 }) {
   return (
     <div
       style={{
-        maxWidth: '600px',
-        margin: '0 auto',
-        padding: '120px 24px',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        textAlign: 'center',
-      }}
-    >
-      {/* Success Icon */}
-      <div
-        style={{
-          width: '80px',
-          height: '80px',
-          borderRadius: '50%',
-          border: `2px solid ${C.successGreen}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: '32px',
-        }}
-      >
-        <svg
-          width="40"
-          height="40"
-          viewBox="0 0 40 40"
-          fill="none"
-          className="confirm-icon-svg"
-        >
-          <path
-            d="M10 20L17 27L30 13"
-            stroke={C.successGreen}
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            style={{
-              strokeDasharray: 200,
-              strokeDashoffset: 0,
-            }}
-          />
-        </svg>
-      </div>
-
-      {/* Heading */}
-      <h1
-        className="confirm-heading"
-        style={{
-          fontFamily: "'Inter', system-ui, sans-serif",
-          fontWeight: 700,
-          fontSize: 'clamp(2rem, 5vw, 4rem)',
-          letterSpacing: '-2.4px',
-          color: C.textPrimary,
-          textTransform: 'uppercase',
-          lineHeight: 0.9,
-          marginBottom: '16px',
-        }}
-      >
-        ORDER CONFIRMED
-      </h1>
-
-      {/* Order Number */}
-      <p
-        className="confirm-body"
-        style={{
-          fontFamily: "'JetBrains Mono', monospace",
-          fontSize: '1.2rem',
-          color: C.accentGold,
-          letterSpacing: '0.05em',
-          marginBottom: '24px',
-        }}
-      >
-        {orderNumber}
-      </p>
-
-      {/* Body */}
-      <p
-        className="confirm-body"
-        style={{
-          fontSize: '1rem',
-          color: C.textMuted,
-          lineHeight: 1.6,
-          maxWidth: '480px',
-          marginBottom: '40px',
-        }}
-      >
-        Thank you for your order. We've sent a confirmation email to{' '}
-        <span style={{ color: C.textPrimary }}>{customerEmail || 'you'}</span>.
-        Your plates will be handcrafted and dispatched within 24 hours.
-      </p>
-
-      {/* Delivery Timeline */}
-      <div
-        className="confirm-timeline"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: '24px',
-          marginBottom: '48px',
-        }}
-      >
-        {[
-          { label: 'ORDERED', active: true },
-          { label: 'PRODUCTION', active: false },
-          { label: 'DISPATCHED', active: false },
-        ].map((item, idx) => (
-          <div
-            key={item.label}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-            }}
-          >
-            <span
-              style={{
-                fontFamily: "'JetBrains Mono', monospace",
-                fontSize: '0.75rem',
-                letterSpacing: '0.1em',
-                color: item.active ? C.successGreen : C.textMuted,
-                textTransform: 'uppercase',
-              }}
-            >
-              {item.active && '✓ '}
-              {item.label}
-            </span>
-            {idx < 2 && (
-              <span
-                style={{
-                  color: C.borderSubtle,
-                  fontSize: '0.75rem',
-                }}
-              >
-                →
-              </span>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* CTA Row */}
-      <div
-        className="confirm-actions"
-        style={{
-          display: 'flex',
-          gap: '16px',
-          justifyContent: 'center',
-          flexWrap: 'wrap',
-          marginBottom: '48px',
-        }}
-      >
-        <SecondaryButton
-          onClick={() => {}}
-          style={{ minWidth: '160px' }}
-        >
-          TRACK ORDER
-        </SecondaryButton>
-        <PrimaryButton
-          onClick={onContinueShopping}
-          style={{ minWidth: '200px' }}
-        >
-          CONTINUE SHOPPING
-        </PrimaryButton>
-      </div>
-
-      {/* Social Share */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '16px',
-        }}
-      >
-        <span
-          style={{
-            fontSize: '0.875rem',
-            color: C.textMuted,
-          }}
-        >
-          Share your build:
-        </span>
-        <SocialIcon icon={<Instagram size={18} />} />
-        <SocialIcon
-          icon={
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="currentColor"
-            >
-              <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-            </svg>
-          }
-        />
-        <SocialIcon icon={<Facebook size={18} />} />
-      </div>
-    </div>
-  )
-}
-
-/* ================================================================== */
-/*  PLATE PREVIEW COMPONENT                                            */
-/* ================================================================== */
-function PlatePreview({ registration }: { registration: string }) {
-  return (
-    <div
-      style={{
-        width: '100%',
-        maxWidth: '520px',
-        height: '120px',
-        backgroundColor: '#FFFFFF',
+        border: `1px solid ${C.borderSubtle}`,
         borderRadius: '8px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'relative',
-        overflow: 'hidden',
-        boxShadow: '0 4px 24px rgba(0,0,0,0.3)',
+        padding: '16px',
+        backgroundColor: C.bgSurface,
       }}
     >
-      {/* Subtle border */}
+      <h3 style={{ margin: '0 0 8px', color: C.textPrimary, fontSize: '0.9rem' }}>
+        {title}
+      </h3>
+      {children}
+    </div>
+  )
+}
+
+function MetadataItemSummary({
+  line,
+  attributes,
+  requiresDocuments,
+}: {
+  line: CartLineNode
+  attributes: Attribute[]
+  requiresDocuments: boolean
+}) {
+  const fallbackType = requiresDocuments ? 'ROAD LEGAL' : 'SHOW / ACCESSORY'
+
+  return (
+    <div
+      style={{
+        border: `1px solid ${C.borderSubtle}`,
+        borderRadius: '6px',
+        padding: '12px',
+        backgroundColor: C.bgPanel,
+      }}
+    >
       <div
         style={{
-          position: 'absolute',
-          inset: '4px',
-          border: '2px solid rgba(0,0,0,0.08)',
-          borderRadius: '6px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          gap: '12px',
+          marginBottom: '8px',
+          color: C.textPrimary,
+          fontSize: '0.9rem',
+          fontWeight: 700,
         }}
-      />
-      {/* Registration text */}
+      >
+        <span>{line.merchandise.product.title}</span>
+        <span style={{ color: C.textMuted, whiteSpace: 'nowrap' }}>
+          Qty {line.quantity}
+        </span>
+      </div>
+      {attributes.length > 0 ? (
+        <dl style={{ display: 'grid', gap: '6px', margin: 0 }}>
+          {attributes.map((attr) => (
+            <div
+              key={`${line.id}-${attr.key}`}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '130px minmax(0, 1fr)',
+                gap: '10px',
+                alignItems: 'baseline',
+              }}
+            >
+              <dt style={{ color: C.textMuted, fontSize: '0.85rem' }}>
+                {titleCase(attr.key)}
+              </dt>
+              <dd style={{ ...reviewLineStyle, margin: 0 }}>
+                {attr.value}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      ) : (
+        <p style={reviewLineStyle}>Plate type: {fallbackType}</p>
+      )}
+    </div>
+  )
+}
+
+function DocumentSummary({
+  label,
+  file,
+}: {
+  label: string
+  file: File | null
+}) {
+  return (
+    <div
+      style={{
+        display: 'grid',
+        gridTemplateColumns: '170px minmax(0, 1fr)',
+        gap: '10px',
+        alignItems: 'baseline',
+      }}
+    >
+      <span style={{ color: C.textMuted, fontSize: '0.9rem' }}>{label}</span>
       <span
         style={{
-          fontFamily: "'JetBrains Mono', monospace",
-          fontSize: '3rem',
-          fontWeight: 700,
-          letterSpacing: '0.15em',
-          color: '#111111',
-          textTransform: 'uppercase',
-          zIndex: 1,
+          ...reviewLineStyle,
+          color: file ? C.textPrimary : C.alertRed,
+          overflowWrap: 'anywhere',
         }}
       >
-        {registration || 'AB12 CDE'}
+        {file?.name || 'Missing'}
       </span>
     </div>
   )
 }
 
-/* ================================================================== */
-/*  ORDER SUMMARY SIDEBAR                                              */
-/* ================================================================== */
 function OrderSummary({
-  registration,
-  plateConfig,
-  plateType,
-  platePrice,
-  deliveryMethod,
-  deliveryPrice,
-  totalPrice,
+  subtotal,
+  total,
+  totalQuantity,
+  documentsReady,
+  requiresDocuments,
 }: {
-  registration: string
-  plateConfig: PlateConfig
-  plateType: PlateType
-  platePrice: number
-  deliveryMethod: DeliveryMethod
-  deliveryPrice: number
-  totalPrice: number
+  subtotal: string
+  total: string
+  totalQuantity: number
+  documentsReady: boolean
+  requiresDocuments: boolean
 }) {
-  const configLabel =
-    plateConfig === 'front-rear'
-      ? 'FRONT & REAR'
-      : plateConfig === 'front-only'
-        ? 'FRONT ONLY'
-        : 'REAR ONLY'
+  return (
+    <aside
+      style={{
+        border: `1px solid ${C.borderSubtle}`,
+        borderRadius: '8px',
+        padding: '22px',
+        backgroundColor: C.bgPanel,
+        position: 'sticky',
+        top: '126px',
+      }}
+    >
+      <h2
+        style={{
+          margin: '0 0 18px',
+          color: C.textPrimary,
+          textTransform: 'uppercase',
+          fontSize: '1rem',
+        }}
+      >
+        Order Summary
+      </h2>
+      <SummaryLine label="Items" value={String(totalQuantity)} />
+      <SummaryLine label="Subtotal" value={formatMoney(subtotal)} />
+      <SummaryLine label="Estimated Total" value={formatMoney(total)} strong />
+      <div
+        style={{
+          borderTop: `1px solid ${C.borderSubtle}`,
+          marginTop: '18px',
+          paddingTop: '18px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '10px',
+        }}
+      >
+        <CheckLine active>Shopify secure payment</CheckLine>
+        <CheckLine active={!requiresDocuments || documentsReady}>
+          {requiresDocuments ? 'DVLA documents ready' : 'No documents required'}
+        </CheckLine>
+        <CheckLine active>Cart metadata attached before payment</CheckLine>
+      </div>
+    </aside>
+  )
+}
 
+function SummaryLine({
+  label,
+  value,
+  strong,
+}: {
+  label: string
+  value: string
+  strong?: boolean
+}) {
   return (
     <div
       style={{
-        backgroundColor: 'rgba(17, 17, 17, 0.6)',
-        backdropFilter: 'blur(20px)',
-        border: '1px solid rgba(255, 255, 255, 0.05)',
-        borderRadius: '8px',
-        padding: '24px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        color: strong ? C.textPrimary : C.textMuted,
+        fontWeight: strong ? 700 : 400,
+        marginBottom: '10px',
       }}
     >
-      {/* Header */}
-      <h3
-        style={{
-          fontFamily: "'Inter', system-ui, sans-serif",
-          fontWeight: 700,
-          fontSize: '1.125rem',
-          letterSpacing: '0.15em',
-          color: C.textPrimary,
-          textTransform: 'uppercase',
-          marginBottom: '20px',
-        }}
-      >
-        ORDER SUMMARY
-      </h3>
-
-      {/* Product Row */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: '12px',
-          marginBottom: '16px',
-        }}
-      >
-        <img
-          src="/plate-4d-gel-black-01.jpg"
-          alt="4D 5mm Gel Black"
-          style={{
-            width: '60px',
-            height: '60px',
-            borderRadius: '4px',
-            objectFit: 'cover',
-          }}
-        />
-        <div style={{ flex: 1 }}>
-          <p
-            style={{
-              fontWeight: 500,
-              color: C.textPrimary,
-              fontSize: '0.95rem',
-            }}
-          >
-            4D 5MM GEL BLACK
-          </p>
-          <p
-            style={{
-              color: C.textMuted,
-              fontSize: '0.85rem',
-            }}
-          >
-            × 1
-          </p>
-        </div>
-        <span
-          style={{
-            fontFamily: "'JetBrains Mono', monospace",
-            color: C.textPrimary,
-            fontSize: '0.95rem',
-          }}
-        >
-          £{platePrice.toFixed(2)}
-        </span>
-      </div>
-
-      {/* Divider */}
-      <div
-        style={{
-          height: '1px',
-          backgroundColor: C.borderSubtle,
-          margin: '16px 0',
-        }}
-      />
-
-      {/* Configuration Summary */}
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '6px',
-        }}
-      >
-        <SummaryLine>
-          <span>REGISTRATION:</span>
-          <span>
-            {registration || '—'}
-          </span>
-        </SummaryLine>
-        <SummaryLine>
-          <span>CONFIG:</span>
-          <span>{configLabel}</span>
-        </SummaryLine>
-        <SummaryLine>
-          <span>TYPE:</span>
-          <span
-            style={{
-              color:
-                plateType === 'road-legal'
-                  ? C.successGreen
-                  : C.alertRed,
-            }}
-          >
-            {plateType === 'road-legal' ? 'ROAD LEGAL' : 'SHOW PLATE'}
-          </span>
-        </SummaryLine>
-      </div>
-
-      {/* Divider */}
-      <div
-        style={{
-          height: '1px',
-          backgroundColor: C.borderSubtle,
-          margin: '16px 0',
-        }}
-      />
-
-      {/* Subtotal */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: '8px',
-        }}
-      >
-        <span style={{ color: C.textMuted, fontSize: '0.95rem' }}>
-          SUBTOTAL
-        </span>
-        <span
-          style={{
-            fontFamily: "'JetBrains Mono', monospace",
-            color: C.textMuted,
-            fontSize: '0.95rem',
-          }}
-        >
-          £{platePrice.toFixed(2)}
-        </span>
-      </div>
-
-      {/* Shipping */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          marginBottom: '8px',
-        }}
-      >
-        <span style={{ color: C.textMuted, fontSize: '0.95rem' }}>
-          SHIPPING ({deliveryMethod.toUpperCase()})
-        </span>
-        <span
-          style={{
-            fontFamily: "'JetBrains Mono', monospace",
-            color: deliveryPrice === 0 ? C.successGreen : C.accentGold,
-            fontSize: '0.95rem',
-          }}
-        >
-          {deliveryPrice === 0 ? 'FREE' : `£${deliveryPrice.toFixed(2)}`}
-        </span>
-      </div>
-
-      {/* Divider */}
-      <div
-        style={{
-          height: '1px',
-          backgroundColor: C.borderSubtle,
-          margin: '16px 0',
-        }}
-      />
-
-      {/* Total */}
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <span
-          style={{
-            fontFamily: "'Inter', system-ui, sans-serif",
-            fontWeight: 700,
-            fontSize: '1.25rem',
-            color: C.textPrimary,
-            textTransform: 'uppercase',
-            letterSpacing: '-0.5px',
-          }}
-        >
-          TOTAL
-        </span>
-        <span
-          style={{
-            fontFamily: "'JetBrains Mono', monospace",
-            fontWeight: 700,
-            fontSize: '1.25rem',
-            color: C.accentGold,
-          }}
-        >
-          £{totalPrice.toFixed(2)}
-        </span>
-      </div>
-
-      {/* Trust Row */}
-      <div
-        style={{
-          display: 'flex',
-          flexWrap: 'wrap',
-          gap: '12px',
-          marginTop: '16px',
-          justifyContent: 'center',
-        }}
-      >
-        {[
-          { icon: <Lock size={12} />, text: 'SSL SECURE' },
-          { icon: <Award size={12} />, text: 'DVLA APPROVED' },
-          { icon: <Clock size={12} />, text: '24H DISPATCH' },
-        ].map((trust) => (
-          <span
-            key={trust.text}
-            style={{
-              fontFamily: "'JetBrains Mono', monospace",
-              fontSize: '0.65rem',
-              color: C.textMuted,
-              display: 'flex',
-              alignItems: 'center',
-              gap: '4px',
-            }}
-          >
-            {trust.icon}
-            {trust.text}
-          </span>
-        ))}
-      </div>
-
-      {/* Payment Icons */}
-      <div
-        style={{
-          display: 'flex',
-          gap: '8px',
-          marginTop: '12px',
-          justifyContent: 'center',
-          alignItems: 'center',
-        }}
-      >
-        <PaymentMethodIcon>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <rect width="24" height="24" rx="3" fill="#757575" opacity="0.15" />
-            <text x="3" y="16" fill="#757575" fontSize="8" fontWeight="700" fontStyle="italic">VISA</text>
-          </svg>
-        </PaymentMethodIcon>
-        <PaymentMethodIcon>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" fill="#757575" opacity="0.2" />
-            <text x="6" y="16" fill="#757575" fontSize="7" fontWeight="700">MC</text>
-          </svg>
-        </PaymentMethodIcon>
-        <PaymentMethodIcon>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <rect width="24" height="24" rx="4" fill="#757575" opacity="0.2" />
-            <text x="4" y="16" fill="#757575" fontSize="8" fontWeight="700">PP</text>
-          </svg>
-        </PaymentMethodIcon>
-        <PaymentMethodIcon>
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <rect width="24" height="24" rx="4" fill="#757575" opacity="0.2" />
-            <text x="4" y="16" fill="#757575" fontSize="8" fontWeight="700">CP</text>
-          </svg>
-        </PaymentMethodIcon>
-      </div>
+      <span>{label}</span>
+      <span style={{ color: strong ? C.accentGold : undefined }}>{value}</span>
     </div>
   )
 }
 
-/* ================================================================== */
-/*  SHARED COMPONENTS                                                  */
-/* ================================================================== */
-
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <label
-      style={{
-        display: 'block',
-        fontFamily: "'Inter', system-ui, sans-serif",
-        fontWeight: 700,
-        fontSize: '0.875rem',
-        letterSpacing: '0.15em',
-        color: C.textPrimary,
-        textTransform: 'uppercase',
-        marginBottom: '8px',
-      }}
-    >
-      {children}
-    </label>
-  )
-}
-
-function ErrorMessage({ children }: { children: React.ReactNode }) {
-  return (
-    <p
-      style={{
-        color: C.alertRed,
-        fontSize: '0.8rem',
-        marginTop: '4px',
-      }}
-    >
-      {children}
-    </p>
-  )
-}
-
-function RadioCard({
-  selected,
-  onClick,
+function CheckLine({
+  active,
   children,
 }: {
-  selected: boolean
-  onClick: () => void
-  children: React.ReactNode
+  active?: boolean
+  children: ReactNode
 }) {
   return (
     <div
-      onClick={onClick}
       style={{
         display: 'flex',
+        gap: '8px',
         alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '14px 16px',
-        backgroundColor: selected ? 'rgba(255, 215, 0, 0.08)' : C.bgSurface,
-        border: `1px solid ${selected ? C.accentGold : C.borderSubtle}`,
-        borderRadius: '8px',
-        cursor: 'pointer',
-        transition: 'all 0.3s ease',
-        color: C.textPrimary,
-        gap: '12px',
-        flexWrap: 'wrap',
-      }}
-      onMouseEnter={(e) => {
-        if (!selected) {
-          e.currentTarget.style.borderColor = 'rgba(255, 215, 0, 0.5)'
-        }
-      }}
-      onMouseLeave={(e) => {
-        if (!selected) {
-          e.currentTarget.style.borderColor = C.borderSubtle
-        }
+        color: active ? C.successGreen : C.textMuted,
+        fontSize: '0.85rem',
       }}
     >
+      <Check size={15} />
       {children}
-      <div
-        style={{
-          width: '18px',
-          height: '18px',
-          borderRadius: '50%',
-          border: `2px solid ${selected ? C.accentGold : C.borderSubtle}`,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          flexShrink: 0,
-          transition: 'border-color 0.3s ease',
-        }}
-      >
-        {selected && (
-          <div
-            style={{
-              width: '8px',
-              height: '8px',
-              borderRadius: '50%',
-              backgroundColor: C.accentGold,
-            }}
-          />
-        )}
-      </div>
     </div>
   )
 }
 
 function PrimaryButton({
   children,
-  onClick,
   disabled,
-  fullWidth,
-  style: extraStyle,
+  onClick,
 }: {
-  children: React.ReactNode
-  onClick: () => void
+  children: ReactNode
   disabled?: boolean
-  fullWidth?: boolean
-  style?: React.CSSProperties
+  onClick: () => void
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       disabled={disabled}
       style={{
-        padding: '16px 32px',
-        borderRadius: '9999px',
-        backgroundColor: disabled ? 'rgba(255, 215, 0, 0.3)' : C.accentGold,
-        color: C.bgVoid,
-        fontFamily: "'Inter', system-ui, sans-serif",
-        fontWeight: 700,
-        fontSize: '0.95rem',
-        letterSpacing: '-0.72px',
-        textTransform: 'uppercase',
-        border: 'none',
+        ...buttonStyle,
+        opacity: disabled ? 0.55 : 1,
         cursor: disabled ? 'not-allowed' : 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        transition: 'all 0.3s cubic-bezier(0.23, 1, 0.32, 1)',
-        transform: 'translateY(0)',
-        width: fullWidth ? '100%' : undefined,
-        opacity: disabled ? 0.4 : 1,
-        pointerEvents: disabled ? 'none' : 'auto',
-        ...extraStyle,
-      }}
-      onMouseEnter={(e) => {
-        if (!disabled) {
-          e.currentTarget.style.transform = 'translateY(-2px)'
-          e.currentTarget.style.boxShadow =
-            '0 0 40px rgba(255, 215, 0, 0.2)'
-        }
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'translateY(0)'
-        e.currentTarget.style.boxShadow = 'none'
       }}
     >
       {children}
@@ -2692,41 +1379,19 @@ function PrimaryButton({
 function SecondaryButton({
   children,
   onClick,
-  style: extraStyle,
 }: {
-  children: React.ReactNode
+  children: ReactNode
   onClick: () => void
-  style?: React.CSSProperties
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
       style={{
-        padding: '16px 32px',
-        borderRadius: '9999px',
+        ...buttonStyle,
         backgroundColor: 'transparent',
-        color: C.textPrimary,
-        fontFamily: "'Inter', system-ui, sans-serif",
-        fontWeight: 700,
-        fontSize: '0.95rem',
-        letterSpacing: '-0.72px',
-        textTransform: 'uppercase',
         border: `1px solid ${C.textMuted}`,
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        transition: 'all 0.3s ease',
-        ...extraStyle,
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = C.accentGold
-        e.currentTarget.style.color = C.accentGold
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = C.textMuted
-        e.currentTarget.style.color = C.textPrimary
+        color: C.textPrimary,
       }}
     >
       {children}
@@ -2734,63 +1399,123 @@ function SecondaryButton({
   )
 }
 
-function SummaryLine({ children }: { children: React.ReactNode }) {
+function IconButton({
+  label,
+  children,
+  disabled,
+  onClick,
+}: {
+  label: string
+  children: ReactNode
+  disabled?: boolean
+  onClick: () => void
+}) {
   return (
-    <div
+    <button
+      type="button"
+      aria-label={label}
+      disabled={disabled}
+      onClick={onClick}
       style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        fontFamily: "'JetBrains Mono', monospace",
-        fontSize: '0.8rem',
-        color: C.textMuted,
-        letterSpacing: '0.02em',
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
-function PaymentMethodIcon({ children }: { children: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        height: '24px',
-        display: 'flex',
-        alignItems: 'center',
-        opacity: 0.5,
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
-function SocialIcon({ icon }: { icon: React.ReactNode }) {
-  return (
-    <div
-      style={{
-        width: '36px',
-        height: '36px',
-        borderRadius: '50%',
+        ...centerStyle,
+        width: '30px',
+        height: '30px',
+        borderRadius: '4px',
         border: `1px solid ${C.borderSubtle}`,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: C.textMuted,
-        cursor: 'pointer',
-        transition: 'all 0.3s ease',
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.borderColor = C.accentGold
-        e.currentTarget.style.color = C.accentGold
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.borderColor = C.borderSubtle
-        e.currentTarget.style.color = C.textMuted
+        backgroundColor: C.bgPanel,
+        color: C.textPrimary,
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.5 : 1,
       }}
     >
-      {icon}
-    </div>
+      {children}
+    </button>
   )
+}
+
+function ErrorMessage({ children }: { children: ReactNode }) {
+  return (
+    <p style={{ color: C.alertRed, fontSize: '0.8rem', margin: '7px 0 0' }}>
+      {children}
+    </p>
+  )
+}
+
+const headingStyle: CSSProperties = {
+  color: C.textPrimary,
+  fontSize: 'clamp(2rem, 5vw, 4rem)',
+  lineHeight: 1,
+  margin: '0 0 12px',
+  textTransform: 'uppercase',
+}
+
+const eyebrowStyle: CSSProperties = {
+  color: C.accentGold,
+  fontSize: '0.8rem',
+  fontWeight: 700,
+  margin: '0 0 10px',
+  textTransform: 'uppercase',
+}
+
+const labelStyle: CSSProperties = {
+  display: 'block',
+  color: C.textMuted,
+  fontSize: '0.75rem',
+  fontWeight: 700,
+  marginBottom: '7px',
+  textTransform: 'uppercase',
+}
+
+const inputStyle: CSSProperties = {
+  width: '100%',
+  border: `1px solid ${C.borderSubtle}`,
+  borderRadius: '8px',
+  backgroundColor: C.bgSurface,
+  color: C.textPrimary,
+  padding: '13px 14px',
+  outline: 'none',
+}
+
+const mutedText: CSSProperties = {
+  color: C.textMuted,
+  fontSize: '0.9rem',
+  lineHeight: 1.6,
+  margin: 0,
+}
+
+const buttonStyle: CSSProperties = {
+  border: 'none',
+  borderRadius: '9999px',
+  backgroundColor: C.accentGold,
+  color: C.bgVoid,
+  padding: '14px 22px',
+  fontWeight: 700,
+  textTransform: 'uppercase',
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: '8px',
+}
+
+const linkStyle: CSSProperties = {
+  color: C.accentGold,
+}
+
+const centerStyle: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+}
+
+const attributePillStyle: CSSProperties = {
+  border: `1px solid ${C.borderSubtle}`,
+  borderRadius: '4px',
+  color: C.textMuted,
+  fontSize: '0.7rem',
+  padding: '2px 6px',
+}
+
+const reviewLineStyle: CSSProperties = {
+  ...mutedText,
+  marginBottom: '4px',
 }

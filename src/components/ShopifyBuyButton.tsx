@@ -24,6 +24,32 @@ interface ShopifyBuyButtonProps {
   buttonText?: string
 }
 
+interface ShopifyBuyClient {
+  config?: unknown
+}
+
+interface ShopifyBuyUi {
+  createComponent: (
+    type: string,
+    options: Record<string, unknown>
+  ) => void
+}
+
+interface ShopifyBuySdk {
+  buildClient: (config: {
+    domain: string
+    storefrontAccessToken: string
+  }) => ShopifyBuyClient
+  UI?: {
+    onReady: (client: ShopifyBuyClient) => Promise<ShopifyBuyUi>
+  }
+}
+
+type ShopifyWindow = Window & {
+  ShopifyBuy?: ShopifyBuySdk
+  ShopifyBuyInit?: () => void
+}
+
 export default function ShopifyBuyButton({ 
   productId, 
   buttonText = 'ADD TO CART' 
@@ -86,17 +112,17 @@ export default function ShopifyBuyButton({
 
     // Initialize this specific product button
     const initButton = () => {
-      const w = window as any
-      if (w.ShopifyBuy && w.ShopifyBuy.UI && w.ShopifyBuyInit) {
+      const w = window as ShopifyWindow
+      if (w.ShopifyBuy?.UI && w.ShopifyBuyInit) {
         // Button will be styled to match the site's dark theme
         const client = w.ShopifyBuy.buildClient({
           domain: 'YOUR_SHOPIFY_DOMAIN.myshopify.com',
           storefrontAccessToken: 'YOUR_STOREFRONT_ACCESS_TOKEN',
         })
 
-        w.ShopifyBuy.UI.onReady(client).then(function (ui: any) {
+        w.ShopifyBuy.UI.onReady(client).then(function (ui) {
           ui.createComponent('product', {
-            id: [parseInt(productId)],
+            id: [Number.parseInt(productId, 10)],
             node: document.getElementById(containerId),
             moneyFormat: '%C2%A3%7B%7Bamount%7D%7D',
             options: {
@@ -201,8 +227,8 @@ export default function ShopifyBuyButton({
 
     // Wait for Shopify SDK to load
     const checkInterval = setInterval(() => {
-      const w = window as any
-      if (w.ShopifyBuy && w.ShopifyBuy.UI) {
+      const w = window as ShopifyWindow
+      if (w.ShopifyBuy?.UI) {
         clearInterval(checkInterval)
         initButton()
       }

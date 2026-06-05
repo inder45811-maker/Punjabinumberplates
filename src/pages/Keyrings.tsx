@@ -5,6 +5,8 @@ import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import PlatePreview from '../components/PlatePreview3D'
 import type { PlateStyle } from '../components/PlatePreview3D'
+import { useCart } from '../context/CartContext'
+import { KEYRING_VARIANTS, buildKeyringAttributes } from '../lib/variantMap'
 import { Star, Minus, Plus, MapPin, ClipboardList, Truck, RotateCcw, MessageCircle } from 'lucide-react'
 
 gsap.registerPlugin(ScrollTrigger)
@@ -97,6 +99,7 @@ export default function Keyrings() {
   const [quantity, setQuantity] = useState(1)
   const [showStickyBar, setShowStickyBar] = useState(false)
   const [activeTab, setActiveTab] = useState<'info' | 'specs' | 'delivery'>('info')
+  const { addToCart, openCart } = useCart()
 
   /* ─── computed price ─── */
   const stylePrices: Record<PlateStyle, number> = {
@@ -107,6 +110,7 @@ export default function Keyrings() {
   }
   const typeMultiplier = keyringType === 'double' ? 2 : 1
   const totalPrice = stylePrices[keyringStyle] * typeMultiplier * quantity
+  const keyringVariantConfigured = Boolean(KEYRING_VARIANTS[keyringStyle])
 
   /* ─── zoom state ─── */
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 })
@@ -118,6 +122,20 @@ export default function Keyrings() {
     const y = ((e.clientY - rect.top) / rect.height) * 100
     setZoomPos({ x, y })
   }, [])
+
+  /* ─── add to cart ─── */
+  const handleAddToCart = useCallback(async () => {
+    const variantId = KEYRING_VARIANTS[keyringStyle]
+    if (!variantId) {
+      alert('Keyrings are not yet available in the Shopify store. Please add the product to Shopify admin first.')
+      return
+    }
+    await addToCart({
+      merchandiseId: variantId,
+      quantity,
+      attributes: buildKeyringAttributes(regInput, keyringStyle, keyringType, notes),
+    })
+  }, [addToCart, keyringStyle, keyringType, quantity, regInput, notes])
 
   /* ─── refs ─── */
   const containerRef = useRef<HTMLDivElement>(null)
@@ -277,7 +295,20 @@ export default function Keyrings() {
             </div>
 
             {/* Thumbnail Strip */}
-            <div style={{ display: 'flex', gap: '8px', marginTop: '12px', flexWrap: 'wrap' }}>
+            <div
+              style={{
+                display: 'flex',
+                gap: '8px',
+                marginTop: '12px',
+                overflowX: 'auto',
+                scrollSnapType: 'x mandatory',
+                WebkitOverflowScrolling: 'touch',
+                scrollbarWidth: 'none',
+                msOverflowStyle: 'none',
+                paddingBottom: '8px',
+              }}
+              className="hide-scrollbar"
+            >
               {galleryImages.map((src, i) => (
                 <button
                   key={i}
@@ -292,6 +323,7 @@ export default function Keyrings() {
                     cursor: 'pointer',
                     background: 'none',
                     flexShrink: 0,
+                    scrollSnapAlign: 'start',
                     transition: `border-color 0.3s ${easeSmooth}`,
                   }}
                 >
@@ -727,34 +759,40 @@ export default function Keyrings() {
               {/* Action Buttons */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <button
+                  onClick={handleAddToCart}
+                  disabled={!keyringVariantConfigured}
                   style={{
                     width: '100%',
                     padding: '16px 32px',
                     borderRadius: '9999px',
-                    border: `1px solid ${c.accentGold}`,
+                    border: `1px solid ${keyringVariantConfigured ? c.accentGold : c.borderSubtle}`,
                     background: 'transparent',
-                    color: c.accentGold,
+                    color: keyringVariantConfigured ? c.accentGold : c.textMuted,
                     fontFamily: 'Inter, system-ui, sans-serif',
                     fontWeight: 700,
                     fontSize: '0.875rem',
                     letterSpacing: '-0.72px',
                     textTransform: 'uppercase',
-                    cursor: 'pointer',
+                    cursor: keyringVariantConfigured ? 'pointer' : 'not-allowed',
+                    opacity: keyringVariantConfigured ? 1 : 0.6,
                     transition: `border-color 0.3s ${easeSmooth}, color 0.3s ${easeSmooth}, background-color 0.3s ${easeSmooth}`,
                   }}
                   onMouseEnter={(e) => {
+                    if (!keyringVariantConfigured) return
                     e.currentTarget.style.backgroundColor = c.accentGold
                     e.currentTarget.style.color = c.bgVoid
                   }}
                   onMouseLeave={(e) => {
+                    if (!keyringVariantConfigured) return
                     e.currentTarget.style.backgroundColor = 'transparent'
                     e.currentTarget.style.color = c.accentGold
                   }}
                 >
-                  ADD TO REG BUILDER
+                  {keyringVariantConfigured ? 'ADD TO CART' : 'COMING SOON'}
                 </button>
 
                 <button
+                  onClick={openCart}
                   style={{
                     width: '100%',
                     padding: '16px 32px',
@@ -779,7 +817,7 @@ export default function Keyrings() {
                     e.currentTarget.style.boxShadow = 'none'
                   }}
                 >
-                  BUY IT NOW
+                  VIEW CART
                 </button>
               </div>
 
@@ -803,7 +841,7 @@ export default function Keyrings() {
                   PICKUP IN-STORE?
                 </div>
                 <a
-                  href="https://wa.me/447741234567"
+                  href="https://wa.me/447384088600"
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{
@@ -1210,8 +1248,10 @@ export default function Keyrings() {
                   <p style={{ fontSize: '0.8rem', color: c.textMuted, marginBottom: '12px', lineHeight: 1.5 }}>
                     {product.desc}
                   </p>
-                  <button
+                  <Link
+                    to="/product"
                     style={{
+                      display: 'block',
                       width: '100%',
                       padding: '10px 20px',
                       borderRadius: '9999px',
@@ -1221,6 +1261,8 @@ export default function Keyrings() {
                       fontWeight: 700,
                       fontSize: '0.75rem',
                       textTransform: 'uppercase',
+                      textDecoration: 'none',
+                      textAlign: 'center',
                       cursor: 'pointer',
                       transition: `border-color 0.3s ${easeSmooth}, color 0.3s ${easeSmooth}`,
                     }}
@@ -1233,8 +1275,8 @@ export default function Keyrings() {
                       e.currentTarget.style.color = c.textPrimary
                     }}
                   >
-                    ADD TO REG BUILDER
-                  </button>
+                    VIEW PRODUCT
+                  </Link>
                 </div>
               </div>
             ))}
@@ -1355,30 +1397,36 @@ export default function Keyrings() {
             </div>
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
+                onClick={handleAddToCart}
+                disabled={!keyringVariantConfigured}
                 style={{
                   padding: '12px 24px',
                   borderRadius: '9999px',
-                  border: `1px solid ${c.textMuted}`,
+                  border: `1px solid ${keyringVariantConfigured ? c.textMuted : c.borderSubtle}`,
                   background: 'transparent',
-                  color: c.textPrimary,
+                  color: keyringVariantConfigured ? c.textPrimary : c.textMuted,
                   fontWeight: 700,
                   fontSize: '0.75rem',
                   textTransform: 'uppercase',
-                  cursor: 'pointer',
+                  cursor: keyringVariantConfigured ? 'pointer' : 'not-allowed',
+                  opacity: keyringVariantConfigured ? 1 : 0.6,
                   transition: `border-color 0.3s ${easeSmooth}, color 0.3s ${easeSmooth}`,
                 }}
                 onMouseEnter={(e) => {
+                  if (!keyringVariantConfigured) return
                   e.currentTarget.style.borderColor = c.accentGold
                   e.currentTarget.style.color = c.accentGold
                 }}
                 onMouseLeave={(e) => {
+                  if (!keyringVariantConfigured) return
                   e.currentTarget.style.borderColor = c.textMuted
                   e.currentTarget.style.color = c.textPrimary
                 }}
               >
-                ADD TO REG BUILDER
+                {keyringVariantConfigured ? 'ADD TO CART' : 'COMING SOON'}
               </button>
               <button
+                onClick={openCart}
                 style={{
                   padding: '12px 24px',
                   borderRadius: '9999px',
@@ -1398,7 +1446,7 @@ export default function Keyrings() {
                   e.currentTarget.style.transform = 'translateY(0)'
                 }}
               >
-                BUY IT NOW
+                VIEW CART
               </button>
             </div>
           </div>

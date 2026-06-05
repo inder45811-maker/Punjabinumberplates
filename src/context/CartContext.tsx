@@ -9,6 +9,11 @@ interface CartItem {
   attributes?: { key: string; value: string }[]
 }
 
+export interface PendingDocuments {
+  proofOfId: File | null
+  proofOfEntitlement: File | null
+}
+
 interface CartContextValue {
   cart: Cart | null
   isOpen: boolean
@@ -20,21 +25,29 @@ interface CartContextValue {
   removeLine: (lineId: string) => Promise<void>
   updateQuantity: (lineId: string, quantity: number) => Promise<void>
   clearError: () => void
-  pendingDocuments: File[]
-  setPendingDocuments: (files: File[]) => void
+  pendingDocuments: PendingDocuments
+  setPendingDocuments: (documents: PendingDocuments) => void
 }
 
 /* ─── Context ─── */
 const CartContext = createContext<CartContextValue | undefined>(undefined)
 
 const CART_ID_KEY = 'pnp-cart-id'
+const EMPTY_PENDING_DOCUMENTS: PendingDocuments = {
+  proofOfId: null,
+  proofOfEntitlement: null,
+}
+
+function errorMessage(err: unknown, fallback: string) {
+  return err instanceof Error && err.message ? err.message : fallback
+}
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [cart, setCart] = useState<Cart | null>(null)
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [pendingDocuments, setPendingDocuments] = useState<File[]>([])
+  const [pendingDocuments, setPendingDocuments] = useState<PendingDocuments>(EMPTY_PENDING_DOCUMENTS)
   const initialized = useRef(false)
 
   /* ─── Hydrate cart from localStorage on mount ─── */
@@ -80,8 +93,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
           persistCart(created)
         }
         setIsOpen(true)
-      } catch (err: any) {
-        setError(err.message || 'Failed to add item to cart')
+      } catch (err: unknown) {
+        setError(errorMessage(err, 'Failed to add item to cart'))
         console.error(err)
       } finally {
         setIsLoading(false)
@@ -98,8 +111,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       try {
         const updated = await removeCartLines(cart.id, [lineId])
         persistCart(updated)
-      } catch (err: any) {
-        setError(err.message || 'Failed to remove item')
+      } catch (err: unknown) {
+        setError(errorMessage(err, 'Failed to remove item'))
         console.error(err)
       } finally {
         setIsLoading(false)
@@ -120,8 +133,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
       try {
         const updated = await updateCartLines(cart.id, [{ id: lineId, quantity }])
         persistCart(updated)
-      } catch (err: any) {
-        setError(err.message || 'Failed to update quantity')
+      } catch (err: unknown) {
+        setError(errorMessage(err, 'Failed to update quantity'))
         console.error(err)
       } finally {
         setIsLoading(false)

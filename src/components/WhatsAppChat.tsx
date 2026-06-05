@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { MessageCircle, X } from 'lucide-react'
 
-const WHATSAPP_NUMBER = '447700900000' // ← UPDATE THIS WITH REAL NUMBER
+const WHATSAPP_NUMBER = import.meta.env.VITE_WHATSAPP_NUMBER || '447384088600'
 const WHATSAPP_LINK = `https://wa.me/${WHATSAPP_NUMBER}?text=Hi%20Punjabi%20Number%20Plates%2C%20I%27m%20interested%20in%20your%20products.`
 
 export default function WhatsAppChat() {

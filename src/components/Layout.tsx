@@ -5,6 +5,7 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import Navbar from './Navbar'
 import Footer from './Footer'
 import WhatsAppChat from './WhatsAppChat'
+import CartDrawer from './CartDrawer'
 
 gsap.registerPlugin(ScrollTrigger)
 
@@ -17,14 +18,16 @@ export default function Layout({ children }: { children: ReactNode }) {
 
     lenis.on('scroll', ScrollTrigger.update)
 
-    gsap.ticker.add((time) => {
+    const tick = (time: number) => {
       lenis.raf(time * 1000)
-    })
+    }
+
+    gsap.ticker.add(tick)
     gsap.ticker.lagSmoothing(0)
 
     return () => {
       lenis.destroy()
-      gsap.ticker.remove(lenis.raf as unknown as gsap.TickerCallback)
+      gsap.ticker.remove(tick)
     }
   }, [])
 
@@ -36,6 +39,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       </div>
       <Footer />
       <WhatsAppChat />
+      <CartDrawer />
     </>
   )
 }

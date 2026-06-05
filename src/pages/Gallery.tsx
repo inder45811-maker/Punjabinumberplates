@@ -53,18 +53,18 @@ interface GalleryItem {
 }
 
 const GALLERY_ITEMS: GalleryItem[] = [
-  { id: 1, image: '/pnp-07.jpg', type: '4D GEL', vehicle: 'BMW M4', customer: 'James R.', likes: 124, aspect: '4/3' },
+  { id: 1, image: '/pnp-07.jpg', type: '4D GEL', vehicle: 'BMW M4', customer: 'James R.', likes: 124, aspect: '3/4' },
   { id: 2, image: '/pnp-05.jpg', type: '4D GEL', vehicle: 'Porsche 911', customer: 'Sophie L.', likes: 98, aspect: '3/4' },
-  { id: 3, image: '/pnp-06.jpg', type: '3D', vehicle: 'Tesla Model 3', customer: 'Alex M.', likes: 156, aspect: '1/1' },
-  { id: 4, image: '/pnp-03.jpg', type: 'SHOW PLATES', vehicle: 'Range Rover', customer: 'Daniel K.', likes: 87, aspect: '16/9' },
-  { id: 5, image: '/pnp-08.jpg', type: 'CARBON', vehicle: 'Audi RS6', customer: 'Emma W.', likes: 203, aspect: '4/3' },
+  { id: 3, image: '/pnp-06.jpg', type: '3D', vehicle: 'Tesla Model 3', customer: 'Alex M.', likes: 156, aspect: '3/4' },
+  { id: 4, image: '/pnp-03.jpg', type: 'SHOW PLATES', vehicle: 'Range Rover', customer: 'Daniel K.', likes: 87, aspect: '3/4' },
+  { id: 5, image: '/pnp-08.jpg', type: 'CARBON', vehicle: 'Audi RS6', customer: 'Emma W.', likes: 203, aspect: '3/4' },
   { id: 6, image: '/pnp-09.jpg', type: '4D GEL', vehicle: 'Mercedes AMG', customer: 'Oliver H.', likes: 112, aspect: '3/4' },
-  { id: 7, image: '/pnp-10.jpg', type: 'SIGNATURE', vehicle: 'Lamborghini', customer: 'Lucas P.', likes: 245, aspect: '4/3' },
-  { id: 8, image: '/pnp-11.jpg', type: 'STICKER PLATES', vehicle: 'Ford Mustang', customer: 'Mia T.', likes: 76, aspect: '1/1' },
-  { id: 9, image: '/pnp-07.jpg', type: '4D GEL', vehicle: 'BMW M3', customer: 'Ryan G.', likes: 134, aspect: '16/9' },
+  { id: 7, image: '/pnp-10.jpg', type: 'SIGNATURE', vehicle: 'Lamborghini', customer: 'Lucas P.', likes: 245, aspect: '3/4' },
+  { id: 8, image: '/pnp-11.jpg', type: 'STICKER PLATES', vehicle: 'Ford Mustang', customer: 'Mia T.', likes: 76, aspect: '3/4' },
+  { id: 9, image: '/pnp-07.jpg', type: '4D GEL', vehicle: 'BMW M3', customer: 'Ryan G.', likes: 134, aspect: '3/4' },
   { id: 10, image: '/pnp-06.jpg', type: '3D', vehicle: 'Tesla Model S', customer: 'Zoe B.', likes: 167, aspect: '3/4' },
-  { id: 11, image: '/pnp-08.jpg', type: 'CARBON', vehicle: 'Audi R8', customer: 'Noah S.', likes: 189, aspect: '4/3' },
-  { id: 12, image: '/pnp-10.jpg', type: 'SIGNATURE', vehicle: 'Porsche Cayman', customer: 'Lily J.', likes: 143, aspect: '1/1' },
+  { id: 11, image: '/pnp-08.jpg', type: 'CARBON', vehicle: 'Audi R8', customer: 'Noah S.', likes: 189, aspect: '3/4' },
+  { id: 12, image: '/pnp-10.jpg', type: 'SIGNATURE', vehicle: 'Porsche Cayman', customer: 'Lily J.', likes: 143, aspect: '3/4' },
 ]
 
 const HERO_IMAGES = [

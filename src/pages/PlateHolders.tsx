@@ -135,6 +135,7 @@ export default function PlateHolders() {
   const holderBase = holderQuantity === 'single' ? 45 : 85
   const platePrice = stylePrices[plateStyle] * (holderQuantity === 'pair' ? 2 : 1)
   const totalPrice = (holderBase + platePrice) * quantity
+  const holderVariantConfigured = Boolean(HOLDER_VARIANTS[plateStyle])
 
   /* ─── zoom state ─── */
   const [zoomPos, setZoomPos] = useState({ x: 50, y: 50 })
@@ -157,9 +158,9 @@ export default function PlateHolders() {
     await addToCart({
       merchandiseId: variantId,
       quantity,
-      attributes: buildHolderAttributes(regInput, plateStyle, holderQuantity, badgeStyle, sideText, notes),
+      attributes: buildHolderAttributes(regInput, plateStyle, plateType, holderQuantity, badgeStyle, sideText, notes),
     })
-  }, [addToCart, plateStyle, holderQuantity, badgeStyle, quantity, regInput, sideText, notes])
+  }, [addToCart, plateStyle, plateType, holderQuantity, badgeStyle, quantity, regInput, sideText, notes])
 
   /* ─── refs ─── */
   const containerRef = useRef<HTMLDivElement>(null)
@@ -887,9 +888,10 @@ export default function PlateHolders() {
                         onChange={(e) => {
                           const file = e.target.files?.[0] || null
                           setProofOfId(file)
-                          setPendingDocuments(
-                            [file, proofOfEntitlement].filter((f): f is File => f !== null)
-                          )
+                          setPendingDocuments({
+                            proofOfId: file,
+                            proofOfEntitlement,
+                          })
                         }}
                         style={{ display: 'none' }}
                       />
@@ -951,9 +953,10 @@ export default function PlateHolders() {
                         onChange={(e) => {
                           const file = e.target.files?.[0] || null
                           setProofOfEntitlement(file)
-                          setPendingDocuments(
-                            [proofOfId, file].filter((f): f is File => f !== null)
-                          )
+                          setPendingDocuments({
+                            proofOfId,
+                            proofOfEntitlement: file,
+                          })
                         }}
                         style={{ display: 'none' }}
                       />
@@ -1159,31 +1162,35 @@ export default function PlateHolders() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <button
                   onClick={handleAddToCart}
+                  disabled={!holderVariantConfigured}
                   style={{
                     width: '100%',
                     padding: '16px 32px',
                     borderRadius: '9999px',
-                    border: `1px solid ${c.textMuted}`,
+                    border: `1px solid ${holderVariantConfigured ? c.textMuted : c.borderSubtle}`,
                     background: 'transparent',
-                    color: c.textPrimary,
+                    color: holderVariantConfigured ? c.textPrimary : c.textMuted,
                     fontFamily: 'Inter, system-ui, sans-serif',
                     fontWeight: 700,
                     fontSize: '0.875rem',
                     letterSpacing: '-0.72px',
                     textTransform: 'uppercase',
-                    cursor: 'pointer',
+                    cursor: holderVariantConfigured ? 'pointer' : 'not-allowed',
+                    opacity: holderVariantConfigured ? 1 : 0.6,
                     transition: `border-color 0.3s ${easeSmooth}, color 0.3s ${easeSmooth}`,
                   }}
                   onMouseEnter={(e) => {
+                    if (!holderVariantConfigured) return
                     e.currentTarget.style.borderColor = c.accentGold
                     e.currentTarget.style.color = c.accentGold
                   }}
                   onMouseLeave={(e) => {
+                    if (!holderVariantConfigured) return
                     e.currentTarget.style.borderColor = c.textMuted
                     e.currentTarget.style.color = c.textPrimary
                   }}
                 >
-                  ADD TO CART
+                  {holderVariantConfigured ? 'ADD TO CART' : 'COMING SOON'}
                 </button>
 
                 <button
@@ -1741,28 +1748,32 @@ export default function PlateHolders() {
             <div style={{ display: 'flex', gap: '12px' }}>
               <button
                 onClick={handleAddToCart}
+                disabled={!holderVariantConfigured}
                 style={{
                   padding: '12px 24px',
                   borderRadius: '9999px',
-                  border: `1px solid ${c.textMuted}`,
+                  border: `1px solid ${holderVariantConfigured ? c.textMuted : c.borderSubtle}`,
                   background: 'transparent',
-                  color: c.textPrimary,
+                  color: holderVariantConfigured ? c.textPrimary : c.textMuted,
                   fontWeight: 700,
                   fontSize: '0.75rem',
                   textTransform: 'uppercase',
-                  cursor: 'pointer',
+                  cursor: holderVariantConfigured ? 'pointer' : 'not-allowed',
+                  opacity: holderVariantConfigured ? 1 : 0.6,
                   transition: `border-color 0.3s ${easeSmooth}, color 0.3s ${easeSmooth}`,
                 }}
                 onMouseEnter={(e) => {
+                  if (!holderVariantConfigured) return
                   e.currentTarget.style.borderColor = c.accentGold
                   e.currentTarget.style.color = c.accentGold
                 }}
                 onMouseLeave={(e) => {
+                  if (!holderVariantConfigured) return
                   e.currentTarget.style.borderColor = c.textMuted
                   e.currentTarget.style.color = c.textPrimary
                 }}
               >
-                ADD TO CART
+                {holderVariantConfigured ? 'ADD TO CART' : 'COMING SOON'}
               </button>
               <button
                 onClick={openCart}

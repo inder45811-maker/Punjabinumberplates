@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router'
 import { Search, User, ShoppingBag, Menu, X } from 'lucide-react'
 import Marquee from 'react-fast-marquee'
+import { useCart } from '../context/CartContext'
 
 const navLinks = [
   { label: 'HOME', to: '/' },
@@ -17,6 +18,8 @@ export default function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const { openCart, cart } = useCart()
+  const cartCount = cart?.totalQuantity ?? 0
 
   useEffect(() => {
     const check = () => setIsMobile(window.innerWidth <= 768)
@@ -133,32 +136,47 @@ export default function Navbar() {
             >
               <User size={20} strokeWidth={1.5} />
             </button>
-            <Link
-              to="/checkout"
+            <button
+              onClick={() => openCart()}
               style={{
                 position: 'relative',
                 color: '#f2f3f4',
                 transition: 'color 0.3s ease',
                 display: 'flex',
                 alignItems: 'center',
+                background: 'none',
+                border: 'none',
+                cursor: 'pointer',
+                padding: '4px',
               }}
               onMouseEnter={(e) => (e.currentTarget.style.color = '#ffd700')}
               onMouseLeave={(e) => (e.currentTarget.style.color = '#f2f3f4')}
             >
               <ShoppingBag size={isMobile ? 18 : 20} strokeWidth={1.5} />
-              <span
-                style={{
-                  position: 'absolute',
-                  top: '-2px',
-                  right: '-2px',
-                  width: '8px',
-                  height: '8px',
-                  backgroundColor: '#ffd700',
-                  borderRadius: '50%',
-                  display: 'block',
-                }}
-              />
-            </Link>
+              {cartCount > 0 && (
+                <span
+                  style={{
+                    position: 'absolute',
+                    top: '-4px',
+                    right: '-6px',
+                    minWidth: '16px',
+                    height: '16px',
+                    backgroundColor: '#ffd700',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontFamily: "'JetBrains Mono', monospace",
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    color: '#050401',
+                    padding: '0 4px',
+                  }}
+                >
+                  {cartCount > 9 ? '9+' : cartCount}
+                </span>
+              )}
+            </button>
             {/* Mobile hamburger */}
             <button
               className="md:hidden"

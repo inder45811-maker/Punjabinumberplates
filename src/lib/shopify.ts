@@ -1,42 +1,54 @@
 /**
- * Shopify Storefront API GraphQL client
- * Uses the Storefront API to manage carts, line items, and checkout.
+ * Shopify Storefront API GraphQL client.
  *
  * Required env vars:
  *   VITE_SHOPIFY_STORE_DOMAIN
+ *
+ * Optional env vars:
  *   VITE_SHOPIFY_STOREFRONT_TOKEN
  */
 
 const DOMAIN = import.meta.env.VITE_SHOPIFY_STORE_DOMAIN
 const TOKEN = import.meta.env.VITE_SHOPIFY_STOREFRONT_TOKEN
-const API_URL = `https://${DOMAIN}/api/2024-04/graphql.json`
+const API_VERSION = '2026-04'
+const API_URL = `https://${DOMAIN}/api/${API_VERSION}/graphql.json`
 
-/* ─── GraphQL fetch helper ─── */
-async function storefront<T = any>(query: string, variables?: Record<string, any>): Promise<T> {
-  const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-  }
-  if (TOKEN) {
-    headers['X-Shopify-Storefront-Access-Token'] = TOKEN
-  }
-  const res = await fetch(API_URL, {
-    method: 'POST',
-    headers,
-    body: JSON.stringify({ query, variables }),
-  })
-
-  if (!res.ok) {
-    throw new Error(`Shopify API error: ${res.status} ${res.statusText}`)
-  }
-
-  const json = await res.json()
-  if (json.errors) {
-    throw new Error(json.errors.map((e: any) => e.message).join(', '))
-  }
-  return json.data as T
+export interface Attribute {
+  key: string
+  value: string
 }
 
-/* ─── Types ─── */
+export interface CartLineInput {
+  merchandiseId: string
+  quantity: number
+  attributes?: Attribute[]
+}
+
+export interface CartLineUpdate {
+  id: string
+  quantity: number
+}
+
+export interface BuyerIdentityInput {
+  email?: string
+  phone?: string
+  countryCode?: string
+}
+
+interface ShopifyGraphQLError {
+  message: string
+}
+
+interface ShopifyUserError {
+  field?: string[] | string | null
+  message: string
+}
+
+interface StorefrontResponse<T> {
+  data?: T
+  errors?: ShopifyGraphQLError[]
+}
+
 export interface CartLine {
   id: string
   quantity: number
@@ -45,10 +57,10 @@ export interface CartLine {
     title: string
     product: {
       title: string
-      featuredImage?: { url: string }
+      featuredImage?: { url: string } | null
     }
   }
-  attributes: { key: string; value: string }[]
+  attributes: Attribute[]
   cost: {
     totalAmount: { amount: string; currencyCode: string }
   }
@@ -65,176 +77,167 @@ export interface Cart {
   lines: { nodes: CartLine[] }
 }
 
-/* ─── Cart operations ─── */
-
-export async function createCart(lines: { merchandiseId: string; quantity: number; attributes?: { key: string; value: string }[] }[]): Promise<Cart> {
-  const query = `
-    mutation cartCreate($input: CartInput!) {
-      cartCreate(input: $input) {
-        cart {
-          id
-          checkoutUrl
-          totalQuantity
-          cost {
-            subtotalAmount { amount currencyCode }
-            totalAmount { amount currencyCode }
-          }
-          lines(first: 100) {
-            nodes {
-              id
-              quantity
-              merchandise { ... on ProductVariant { id title product { title featuredImage { url } } } }
-              attributes { key value }
-              cost { totalAmount { amount currencyCode } }
+const CART_FRAGMENT = `
+  fragment CartFields on Cart {
+    id
+    checkoutUrl
+    totalQuantity
+    cost {
+      subtotalAmount { amount currencyCode }
+      totalAmount { amount currencyCode }
+    }
+    lines(first: 100) {
+      nodes {
+        id
+        quantity
+        merchandise {
+          ... on ProductVariant {
+            id
+            title
+            product {
+              title
+              featuredImage { url }
             }
           }
         }
+        attributes { key value }
+        cost { totalAmount { amount currencyCode } }
+      }
+    }
+  }
+`
+
+async function storefront<T>(
+  query: string,
+  variables?: Record<string, unknown>
+): Promise<T> {
+  if (!DOMAIN) {
+    throw new Error('Shopify Storefront API is not configured')
+  }
+
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  }
+  if (TOKEN) {
+    headers['X-Shopify-Storefront-Access-Token'] = TOKEN
+  }
+
+  const res = await fetch(API_URL, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ query, variables }),
+  })
+
+  if (!res.ok) {
+    throw new Error(`Shopify API error: ${res.status} ${res.statusText}`)
+  }
+
+  const json = (await res.json()) as StorefrontResponse<T>
+  if (json.errors?.length) {
+    throw new Error(json.errors.map((e) => e.message).join(', '))
+  }
+  if (!json.data) {
+    throw new Error('Shopify API returned an empty response')
+  }
+  return json.data
+}
+
+function assertNoUserErrors(errors: ShopifyUserError[]) {
+  if (errors.length) {
+    throw new Error(errors.map((e) => e.message).join(', '))
+  }
+}
+
+export async function createCart(lines: CartLineInput[]): Promise<Cart> {
+  const query = `
+    ${CART_FRAGMENT}
+    mutation cartCreate($input: CartInput!) {
+      cartCreate(input: $input) {
+        cart { ...CartFields }
         userErrors { field message }
       }
     }
   `
-  const data = await storefront<{ cartCreate: { cart: Cart; userErrors: any[] } }>(query, {
-    input: { lines },
-  })
+  const data = await storefront<{
+    cartCreate: { cart: Cart | null; userErrors: ShopifyUserError[] }
+  }>(query, { input: { lines } })
 
-  if (data.cartCreate.userErrors.length) {
-    throw new Error(data.cartCreate.userErrors.map((e) => e.message).join(', '))
-  }
+  assertNoUserErrors(data.cartCreate.userErrors)
+  if (!data.cartCreate.cart) throw new Error('Shopify did not return a cart')
   return data.cartCreate.cart
 }
 
-export async function addCartLines(cartId: string, lines: { merchandiseId: string; quantity: number; attributes?: { key: string; value: string }[] }[]): Promise<Cart> {
+export async function addCartLines(
+  cartId: string,
+  lines: CartLineInput[]
+): Promise<Cart> {
   const query = `
+    ${CART_FRAGMENT}
     mutation cartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!) {
       cartLinesAdd(cartId: $cartId, lines: $lines) {
-        cart {
-          id
-          checkoutUrl
-          totalQuantity
-          cost {
-            subtotalAmount { amount currencyCode }
-            totalAmount { amount currencyCode }
-          }
-          lines(first: 100) {
-            nodes {
-              id
-              quantity
-              merchandise { ... on ProductVariant { id title product { title featuredImage { url } } } }
-              attributes { key value }
-              cost { totalAmount { amount currencyCode } }
-            }
-          }
-        }
+        cart { ...CartFields }
         userErrors { field message }
       }
     }
   `
-  const data = await storefront<{ cartLinesAdd: { cart: Cart; userErrors: any[] } }>(query, {
-    cartId,
-    lines,
-  })
+  const data = await storefront<{
+    cartLinesAdd: { cart: Cart | null; userErrors: ShopifyUserError[] }
+  }>(query, { cartId, lines })
 
-  if (data.cartLinesAdd.userErrors.length) {
-    throw new Error(data.cartLinesAdd.userErrors.map((e) => e.message).join(', '))
-  }
+  assertNoUserErrors(data.cartLinesAdd.userErrors)
+  if (!data.cartLinesAdd.cart) throw new Error('Shopify did not return a cart')
   return data.cartLinesAdd.cart
 }
 
-export async function removeCartLines(cartId: string, lineIds: string[]): Promise<Cart> {
+export async function removeCartLines(
+  cartId: string,
+  lineIds: string[]
+): Promise<Cart> {
   const query = `
+    ${CART_FRAGMENT}
     mutation cartLinesRemove($cartId: ID!, $lineIds: [ID!]!) {
       cartLinesRemove(cartId: $cartId, lineIds: $lineIds) {
-        cart {
-          id
-          checkoutUrl
-          totalQuantity
-          cost {
-            subtotalAmount { amount currencyCode }
-            totalAmount { amount currencyCode }
-          }
-          lines(first: 100) {
-            nodes {
-              id
-              quantity
-              merchandise { ... on ProductVariant { id title product { title featuredImage { url } } } }
-              attributes { key value }
-              cost { totalAmount { amount currencyCode } }
-            }
-          }
-        }
+        cart { ...CartFields }
         userErrors { field message }
       }
     }
   `
-  const data = await storefront<{ cartLinesRemove: { cart: Cart; userErrors: any[] } }>(query, {
-    cartId,
-    lineIds,
-  })
+  const data = await storefront<{
+    cartLinesRemove: { cart: Cart | null; userErrors: ShopifyUserError[] }
+  }>(query, { cartId, lineIds })
 
-  if (data.cartLinesRemove.userErrors.length) {
-    throw new Error(data.cartLinesRemove.userErrors.map((e) => e.message).join(', '))
-  }
+  assertNoUserErrors(data.cartLinesRemove.userErrors)
+  if (!data.cartLinesRemove.cart) throw new Error('Shopify did not return a cart')
   return data.cartLinesRemove.cart
 }
 
-export async function updateCartLines(cartId: string, lines: { id: string; quantity: number }[]): Promise<Cart> {
+export async function updateCartLines(
+  cartId: string,
+  lines: CartLineUpdate[]
+): Promise<Cart> {
   const query = `
+    ${CART_FRAGMENT}
     mutation cartLinesUpdate($cartId: ID!, $lines: [CartLineUpdateInput!]!) {
       cartLinesUpdate(cartId: $cartId, lines: $lines) {
-        cart {
-          id
-          checkoutUrl
-          totalQuantity
-          cost {
-            subtotalAmount { amount currencyCode }
-            totalAmount { amount currencyCode }
-          }
-          lines(first: 100) {
-            nodes {
-              id
-              quantity
-              merchandise { ... on ProductVariant { id title product { title featuredImage { url } } } }
-              attributes { key value }
-              cost { totalAmount { amount currencyCode } }
-            }
-          }
-        }
+        cart { ...CartFields }
         userErrors { field message }
       }
     }
   `
-  const data = await storefront<{ cartLinesUpdate: { cart: Cart; userErrors: any[] } }>(query, {
-    cartId,
-    lines,
-  })
+  const data = await storefront<{
+    cartLinesUpdate: { cart: Cart | null; userErrors: ShopifyUserError[] }
+  }>(query, { cartId, lines })
 
-  if (data.cartLinesUpdate.userErrors.length) {
-    throw new Error(data.cartLinesUpdate.userErrors.map((e) => e.message).join(', '))
-  }
+  assertNoUserErrors(data.cartLinesUpdate.userErrors)
+  if (!data.cartLinesUpdate.cart) throw new Error('Shopify did not return a cart')
   return data.cartLinesUpdate.cart
 }
 
 export async function getCart(cartId: string): Promise<Cart | null> {
   const query = `
+    ${CART_FRAGMENT}
     query getCart($cartId: ID!) {
-      cart(id: $cartId) {
-        id
-        checkoutUrl
-        totalQuantity
-        cost {
-          subtotalAmount { amount currencyCode }
-          totalAmount { amount currencyCode }
-        }
-        lines(first: 100) {
-          nodes {
-            id
-            quantity
-            merchandise { ... on ProductVariant { id title product { title featuredImage { url } } } }
-            attributes { key value }
-            cost { totalAmount { amount currencyCode } }
-          }
-        }
-      }
+      cart(id: $cartId) { ...CartFields }
     }
   `
   const data = await storefront<{ cart: Cart | null }>(query, { cartId })
@@ -243,41 +246,46 @@ export async function getCart(cartId: string): Promise<Cart | null> {
 
 export async function cartAttributesUpdate(
   cartId: string,
-  attributes: { key: string; value: string }[]
+  attributes: Attribute[]
 ): Promise<Cart> {
   const query = `
+    ${CART_FRAGMENT}
     mutation cartAttributesUpdate($cartId: ID!, $attributes: [AttributeInput!]!) {
       cartAttributesUpdate(cartId: $cartId, attributes: $attributes) {
-        cart {
-          id
-          checkoutUrl
-          totalQuantity
-          cost {
-            subtotalAmount { amount currencyCode }
-            totalAmount { amount currencyCode }
-          }
-          lines(first: 100) {
-            nodes {
-              id
-              quantity
-              merchandise { ... on ProductVariant { id title product { title featuredImage { url } } } }
-              attributes { key value }
-              cost { totalAmount { amount currencyCode } }
-            }
-          }
-        }
+        cart { ...CartFields }
         userErrors { field message }
       }
     }
   `
   const data = await storefront<{
-    cartAttributesUpdate: { cart: Cart; userErrors: { field: string; message: string }[] }
+    cartAttributesUpdate: { cart: Cart | null; userErrors: ShopifyUserError[] }
   }>(query, { cartId, attributes })
 
-  if (data.cartAttributesUpdate.userErrors.length) {
-    throw new Error(
-      data.cartAttributesUpdate.userErrors.map((e) => e.message).join(', ')
-    )
-  }
+  assertNoUserErrors(data.cartAttributesUpdate.userErrors)
+  if (!data.cartAttributesUpdate.cart) throw new Error('Shopify did not return a cart')
   return data.cartAttributesUpdate.cart
+}
+
+export async function cartBuyerIdentityUpdate(
+  cartId: string,
+  buyerIdentity: BuyerIdentityInput
+): Promise<Cart> {
+  const query = `
+    ${CART_FRAGMENT}
+    mutation cartBuyerIdentityUpdate($cartId: ID!, $buyerIdentity: CartBuyerIdentityInput!) {
+      cartBuyerIdentityUpdate(cartId: $cartId, buyerIdentity: $buyerIdentity) {
+        cart { ...CartFields }
+        userErrors { field message }
+      }
+    }
+  `
+  const data = await storefront<{
+    cartBuyerIdentityUpdate: { cart: Cart | null; userErrors: ShopifyUserError[] }
+  }>(query, { cartId, buyerIdentity })
+
+  assertNoUserErrors(data.cartBuyerIdentityUpdate.userErrors)
+  if (!data.cartBuyerIdentityUpdate.cart) {
+    throw new Error('Shopify did not return a cart')
+  }
+  return data.cartBuyerIdentityUpdate.cart
 }
