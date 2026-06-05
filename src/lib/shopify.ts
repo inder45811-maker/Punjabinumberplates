@@ -6,11 +6,12 @@
  *
  * Optional env vars:
  *   VITE_SHOPIFY_STOREFRONT_TOKEN
+ *   VITE_SHOPIFY_API_VERSION
  */
 
 const DOMAIN = import.meta.env.VITE_SHOPIFY_STORE_DOMAIN
 const TOKEN = import.meta.env.VITE_SHOPIFY_STOREFRONT_TOKEN
-const API_VERSION = '2026-04'
+const API_VERSION = import.meta.env.VITE_SHOPIFY_API_VERSION || '2026-04'
 const API_URL = `https://${DOMAIN}/api/${API_VERSION}/graphql.json`
 
 export interface Attribute {
@@ -35,6 +36,75 @@ export interface BuyerIdentityInput {
   countryCode?: string
 }
 
+export interface MoneyV2 {
+  amount: string
+  currencyCode: string
+}
+
+export interface StorefrontImage {
+  url: string
+  altText?: string | null
+  width?: number | null
+  height?: number | null
+}
+
+export interface StorefrontSelectedOption {
+  name: string
+  value: string
+}
+
+export interface StorefrontVariant {
+  id: string
+  title: string
+  sku?: string | null
+  availableForSale: boolean
+  quantityAvailable?: number | null
+  selectedOptions: StorefrontSelectedOption[]
+  price: MoneyV2
+  compareAtPrice?: MoneyV2 | null
+  image?: StorefrontImage | null
+}
+
+export interface StorefrontProduct {
+  id: string
+  title: string
+  handle: string
+  description: string
+  descriptionHtml: string
+  vendor: string
+  productType: string
+  tags: string[]
+  availableForSale: boolean
+  featuredImage?: StorefrontImage | null
+  images: { nodes: StorefrontImage[] }
+  options: { name: string; values: string[] }[]
+  variants: { nodes: StorefrontVariant[] }
+  seo?: { title?: string | null; description?: string | null } | null
+}
+
+export interface StorefrontCollection {
+  id: string
+  title: string
+  handle: string
+  description: string
+  image?: StorefrontImage | null
+  seo?: { title?: string | null; description?: string | null } | null
+  products: { nodes: StorefrontProduct[] }
+}
+
+export interface StorefrontCollectionPreview {
+  id: string
+  title: string
+  handle: string
+  image?: StorefrontImage | null
+  products: {
+    nodes: {
+      featuredImage?: StorefrontImage | null
+      images: { nodes: StorefrontImage[] }
+    }[]
+  }
+}
+
 interface ShopifyGraphQLError {
   message: string
 }
@@ -57,6 +127,7 @@ export interface CartLine {
     title: string
     product: {
       title: string
+      handle: string
       featuredImage?: { url: string } | null
     }
   }
@@ -96,6 +167,7 @@ const CART_FRAGMENT = `
             title
             product {
               title
+              handle
               featuredImage { url }
             }
           }
@@ -103,6 +175,63 @@ const CART_FRAGMENT = `
         attributes { key value }
         cost { totalAmount { amount currencyCode } }
       }
+    }
+  }
+`
+
+const IMAGE_FIELDS = `
+  url
+  altText
+  width
+  height
+`
+
+const PRODUCT_FRAGMENT = `
+  fragment ProductFields on Product {
+    id
+    title
+    handle
+    description
+    descriptionHtml
+    vendor
+    productType
+    tags
+    availableForSale
+    featuredImage { ${IMAGE_FIELDS} }
+    images(first: 12) {
+      nodes { ${IMAGE_FIELDS} }
+    }
+    options {
+      name
+      values
+    }
+    variants(first: 100) {
+      nodes {
+        id
+        title
+        sku
+        availableForSale
+        selectedOptions { name value }
+        price { amount currencyCode }
+        compareAtPrice { amount currencyCode }
+        image { ${IMAGE_FIELDS} }
+      }
+    }
+    seo { title description }
+  }
+`
+
+const COLLECTION_FRAGMENT = `
+  ${PRODUCT_FRAGMENT}
+  fragment CollectionFields on Collection {
+    id
+    title
+    handle
+    description
+    image { ${IMAGE_FIELDS} }
+    seo { title description }
+    products(first: 50) {
+      nodes { ...ProductFields }
     }
   }
 `
@@ -165,6 +294,187 @@ export async function createCart(lines: CartLineInput[]): Promise<Cart> {
   assertNoUserErrors(data.cartCreate.userErrors)
   if (!data.cartCreate.cart) throw new Error('Shopify did not return a cart')
   return data.cartCreate.cart
+}
+
+export async function getCollectionByHandle(
+  handle: string
+): Promise<StorefrontCollection | null> {
+  const query = `
+    ${COLLECTION_FRAGMENT}
+    query getCollectionByHandle($handle: String!) {
+      collection(handle: $handle) { ...CollectionFields }
+    }
+  `
+  const data = await storefront<{ collection: StorefrontCollection | null }>(query, {
+    handle,
+  })
+  return data.collection
+}
+
+export async function getCollections(): Promise<StorefrontCollection[]> {
+  const query = `
+    ${COLLECTION_FRAGMENT}
+    query getCollections {
+      collections(first: 100) {
+        nodes { ...CollectionFields }
+      }
+    }
+  `
+  const data = await storefront<{ collections: { nodes: StorefrontCollection[] } }>(query)
+  return data.collections.nodes
+}
+
+export async function getCollectionsByHandles(
+  handles: string[]
+): Promise<StorefrontCollection[]> {
+  if (!handles.length) return []
+  const handleSet = new Set(handles)
+  const collections = await getCollections()
+  return collections.filter((collection) => handleSet.has(collection.handle))
+}
+
+export async function getCollectionPreviewsByHandles(
+  handles: string[]
+): Promise<StorefrontCollectionPreview[]> {
+  if (!handles.length) return []
+  const query = `
+    query getCollectionPreviews {
+      collections(first: 100) {
+        nodes {
+          id
+          title
+          handle
+          image { ${IMAGE_FIELDS} }
+          products(first: 1) {
+            nodes {
+              featuredImage { ${IMAGE_FIELDS} }
+              images(first: 1) {
+                nodes { ${IMAGE_FIELDS} }
+              }
+            }
+          }
+        }
+      }
+    }
+  `
+  const data = await storefront<{
+    collections: { nodes: StorefrontCollectionPreview[] }
+  }>(query)
+  const handleSet = new Set(handles)
+  return data.collections.nodes.filter((collection) => handleSet.has(collection.handle))
+}
+
+export async function getProductsByCollectionHandles(
+  handles: string[]
+): Promise<StorefrontProduct[]> {
+  const collections = await Promise.all(handles.map((handle) => getCollectionByHandle(handle)))
+  const seen = new Set<string>()
+  return collections.flatMap((collection) => {
+    if (!collection) return []
+    return collection.products.nodes.filter((product) => {
+      if (seen.has(product.id)) return false
+      seen.add(product.id)
+      return true
+    })
+  })
+}
+
+export async function getProductByHandle(
+  handle: string
+): Promise<StorefrontProduct | null> {
+  const query = `
+    ${PRODUCT_FRAGMENT}
+    query getProductByHandle($handle: String!) {
+      product(handle: $handle) { ...ProductFields }
+    }
+  `
+  const data = await storefront<{ product: StorefrontProduct | null }>(query, {
+    handle,
+  })
+  return data.product
+}
+
+export function money(value: MoneyV2 | undefined | null) {
+  if (!value) return ''
+  const amount = Number.parseFloat(value.amount)
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: value.currencyCode || 'GBP',
+  }).format(Number.isFinite(amount) ? amount : 0)
+}
+
+export function firstAvailableVariant(product: StorefrontProduct) {
+  return (
+    product.variants.nodes.find((variant) => variant.availableForSale) ??
+    product.variants.nodes[0] ??
+    null
+  )
+}
+
+export function variantById(product: StorefrontProduct, variantId?: string | null) {
+  if (!variantId) return null
+  return product.variants.nodes.find((variant) => variant.id === variantId) ?? null
+}
+
+export function variantByOptions(
+  product: StorefrontProduct,
+  selectedOptions: Record<string, string>
+) {
+  return (
+    product.variants.nodes.find((variant) =>
+      variant.selectedOptions.every(
+        (option) => selectedOptions[option.name] === option.value
+      )
+    ) ?? null
+  )
+}
+
+export function imageUrl(
+  image: StorefrontImage | undefined | null,
+  options: { width?: number; height?: number; crop?: 'center' | 'top' | 'bottom' } = {}
+) {
+  if (!image?.url) return ''
+  try {
+    const url = new URL(image.url)
+    if (options.width) url.searchParams.set('width', String(options.width))
+    if (options.height) url.searchParams.set('height', String(options.height))
+    if (options.crop) url.searchParams.set('crop', options.crop)
+    url.searchParams.set('format', 'webp')
+    return url.toString()
+  } catch {
+    return image.url
+  }
+}
+
+export function productImage(product: StorefrontProduct, variant?: StorefrontVariant | null) {
+  return variant?.image ?? product.featuredImage ?? product.images.nodes[0] ?? null
+}
+
+export function customLineAttributes(input: {
+  registration?: string
+  plateStyle?: string
+  plateType?: string
+  configuration?: string
+  notes?: string
+  selectedOptions?: StorefrontSelectedOption[]
+}) {
+  const attrs: Attribute[] = []
+  const registration = input.registration?.trim().toUpperCase()
+  const notes = input.notes?.trim()
+
+  if (registration) attrs.push({ key: '_registration', value: registration })
+  if (input.plateStyle) attrs.push({ key: '_plate_style', value: input.plateStyle })
+  if (input.plateType) attrs.push({ key: '_plate_type', value: input.plateType })
+  if (input.configuration) attrs.push({ key: '_configuration', value: input.configuration })
+  if (notes) attrs.push({ key: '_customer_notes', value: notes })
+
+  input.selectedOptions?.forEach((option) => {
+    if (option.name.toLowerCase() !== 'title') {
+      attrs.push({ key: `_${option.name.toLowerCase().replace(/[^a-z0-9]+/g, '_')}`, value: option.value })
+    }
+  })
+
+  return attrs
 }
 
 export async function addCartLines(

@@ -96,6 +96,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       } catch (err: unknown) {
         setError(errorMessage(err, 'Failed to add item to cart'))
         console.error(err)
+        throw err
       } finally {
         setIsLoading(false)
       }

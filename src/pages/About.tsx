@@ -92,7 +92,7 @@ export default function About() {
         <div ref={storyRef} style={{ maxWidth: '1440px', margin: '0 auto', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '48px', alignItems: 'center' }}>
           <div>
             <img
-              src="/pnp-07.jpg"
+              src="/pnp-07.webp"
               alt="Punjabi Number Plates"
               style={{ width: '100%', height: 'auto', borderRadius: '8px', border: '1px solid #222222' }}
             />
@@ -124,11 +124,11 @@ export default function About() {
               fontFamily: 'Inter, system-ui, sans-serif', fontSize: '1rem',
               color: '#757575', lineHeight: 1.6, marginBottom: '32px',
             }}>
-              From 4D laser-cut gel characters to carbon composite backing and UV-cured resin finishes,
-              every plate is precision-crafted in our UK workshop.
+              From 4D laser-cut gel characters to premium custom finishes,
+              every plate is precision-crafted for a clean, high-quality look.
             </p>
             <Link
-              to="/product"
+              to="/categories/number-plates"
               style={{
                 padding: '14px 32px', borderRadius: '9999px', backgroundColor: '#ffd700',
                 color: '#050401', fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 700,
@@ -225,7 +225,7 @@ export default function About() {
               CONTACT US
             </Link>
             <Link
-              to="/product"
+              to="/categories/number-plates"
               style={{
                 padding: '14px 32px', borderRadius: '9999px', border: '1px solid #757575',
                 backgroundColor: 'transparent', color: '#f2f3f4',

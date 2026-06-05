@@ -68,7 +68,7 @@ function localApiPlugin(mode: string): Plugin {
 
 // https://vite.dev/config/
 export default defineConfig(({ mode }) => ({
-  base: './',
+  base: '/',
   plugins: [localApiPlugin(mode), inspectAttr(), react()],
   server: {
     port: 3000,

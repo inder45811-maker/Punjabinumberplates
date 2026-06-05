@@ -1050,7 +1050,7 @@ function ContactCTA() {
           ref={sectionRef}
           style={{ maxWidth: '600px', margin: '0 auto', textAlign: 'center' }}
         >
-          <h1
+          <h2
             style={{
               fontFamily: "'Inter', system-ui, sans-serif",
               fontWeight: 700,
@@ -1062,7 +1062,7 @@ function ContactCTA() {
             }}
           >
             QUESTIONS?
-          </h1>
+          </h2>
           <p
             style={{
               fontFamily: "'Inter', system-ui, sans-serif",

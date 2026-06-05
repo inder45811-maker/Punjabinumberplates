@@ -1140,7 +1140,7 @@ function CTABanner() {
           }
         `}</style>
 
-        <h1
+        <h2
           style={{
             fontFamily: "'Inter', system-ui, sans-serif",
             fontWeight: 700,
@@ -1152,7 +1152,7 @@ function CTABanner() {
           }}
         >
           VISIT US IN PERSON
-        </h1>
+        </h2>
         <p
           style={{
             fontFamily: "'Inter', system-ui, sans-serif",

@@ -92,7 +92,7 @@ function attrValue(attrs: Attribute[], key: string) {
 function isRoadLegalCart(cart: Cart | null) {
   if (!cart) return false
   return cart.lines.nodes.some((line) => {
-    const type = attrValue(line.attributes, 'Type')
+    const type = attrValue(line.attributes, '_plate_type') || attrValue(line.attributes, 'Type')
     return (
       type?.toUpperCase().includes('ROAD LEGAL') ||
       line.merchandise.product.title.toUpperCase().includes('ROAD LEGAL')
@@ -107,9 +107,11 @@ function collectCartMetadata(cart: Cart) {
 
   cart.lines.nodes.forEach((line) => {
     const registration =
-      attrValue(line.attributes, 'Registration') || attrValue(line.attributes, 'Text')
-    const type = attrValue(line.attributes, 'Type')
-    const note = attrValue(line.attributes, 'Notes')
+      attrValue(line.attributes, '_registration') ||
+      attrValue(line.attributes, 'Registration') ||
+      attrValue(line.attributes, 'Text')
+    const type = attrValue(line.attributes, '_plate_type') || attrValue(line.attributes, 'Type')
+    const note = attrValue(line.attributes, '_customer_notes') || attrValue(line.attributes, 'Notes')
 
     if (registration) registrations.add(registration)
     if (type) plateTypes.add(type)
@@ -126,6 +128,11 @@ function collectCartMetadata(cart: Cart) {
 type CartLineNode = Cart['lines']['nodes'][number]
 
 const REVIEW_ATTRIBUTE_ORDER = [
+  '_registration',
+  '_plate_type',
+  '_plate_style',
+  '_configuration',
+  '_customer_notes',
   'Registration',
   'Text',
   'Type',
@@ -649,7 +656,7 @@ function EmptyCheckout() {
         <p style={{ ...mutedText, marginBottom: '24px' }}>
           Add a plate, holder, or keyring before starting checkout.
         </p>
-        <Link to="/product" style={{ ...buttonStyle, textDecoration: 'none' }}>
+        <Link to="/categories/number-plates" style={{ ...buttonStyle, textDecoration: 'none' }}>
           Start Shopping
         </Link>
       </div>

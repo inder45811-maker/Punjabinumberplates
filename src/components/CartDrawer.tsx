@@ -171,7 +171,7 @@ export default function CartDrawer() {
                 Your bag is empty.
                 <br />
                 <Link
-                  to="/product"
+                  to="/categories/number-plates"
                   onClick={closeCart}
                   style={{ color: c.accentGold, textDecoration: 'none', fontWeight: 600 }}
                 >

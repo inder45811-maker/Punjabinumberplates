@@ -1,325 +1,122 @@
-import { useState, useEffect } from 'react'
-import { Link } from 'react-router'
-import { Search, User, ShoppingBag, Menu, X } from 'lucide-react'
-import Marquee from 'react-fast-marquee'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
+import { Link, NavLink } from 'react-router'
+import { Menu, ShoppingBag, X } from 'lucide-react'
+import { categories } from '../lib/catalog'
 import { useCart } from '../context/CartContext'
 
-const navLinks = [
-  { label: 'HOME', to: '/' },
-  { label: 'SHOP', to: '/product' },
-  { label: 'HOLDERS', to: '/plate-holders' },
-  { label: 'KEYRINGS', to: '/keyrings' },
-  { label: 'GALLERY', to: '/gallery' },
-  { label: 'ABOUT', to: '/about' },
-  { label: 'CONTACT', to: '/contact' },
+const primaryLinks = [
+  { label: 'Home', to: '/' },
+  ...categories.map((category) => ({
+    label: category.shortLabel,
+    to: `/categories/${category.slug}`,
+  })),
+  { label: 'Contact', to: '/contact' },
 ]
 
 export default function Navbar() {
-  const [mobileOpen, setMobileOpen] = useState(false)
-  const [scrolled, setScrolled] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
   const { openCart, cart } = useCart()
   const cartCount = cart?.totalQuantity ?? 0
 
   useEffect(() => {
-    const check = () => setIsMobile(window.innerWidth <= 768)
-    check()
-    window.addEventListener('resize', check)
-    return () => window.removeEventListener('resize', check)
-  }, [])
+    if (!menuOpen) return
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 10)
-    window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setMenuOpen(false)
+    }
+
+    document.body.style.overflow = 'hidden'
+    window.addEventListener('keydown', onKeyDown)
+
+    return () => {
+      document.body.style.overflow = ''
+      window.removeEventListener('keydown', onKeyDown)
+    }
+  }, [menuOpen])
 
   return (
-    <>
-      <nav
-        style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          width: '100%',
-          height: '64px',
-          zIndex: 1000,
-          backgroundColor: scrolled ? 'rgba(5, 4, 1, 0.95)' : '#050401',
-          borderBottom: '1px solid #222222',
-          backdropFilter: scrolled ? 'blur(20px)' : 'none',
-          transition: 'background-color 0.3s ease, backdrop-filter 0.3s ease',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '1440px',
-            margin: '0 auto',
-            padding: isMobile ? '0 12px' : '0 24px',
-            height: '100%',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
-          {/* Logo */}
-          <Link
-            to="/"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px',
-              textDecoration: 'none',
-            }}
+    <header className="site-header">
+      <div className="announcement-bar">In-store pickup available | Road legal and show plate options</div>
+      <nav className="site-nav" aria-label="Primary navigation">
+        <div className="site-nav__brand">
+          <button
+            type="button"
+            className="icon-button category-menu-button"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open category menu"
+            aria-expanded={menuOpen}
           >
-            <img src="/logo.png" alt="PNP" style={{ width: isMobile ? '28px' : '36px', height: isMobile ? '28px' : '36px', borderRadius: '50%', flexShrink: 0 }} />
-            <span
-              style={{
-                fontFamily: 'Inter, system-ui, sans-serif',
-                fontWeight: 700,
-                fontSize: isMobile ? '0.85rem' : '1.1rem',
-                letterSpacing: isMobile ? '0.5px' : '-0.5px',
-                color: '#f2f3f4',
-                textTransform: 'uppercase',
-                whiteSpace: 'nowrap',
-              }}
-            >
-              {isMobile ? 'PNP' : 'PUNJABI NUMBER PLATES'}
-            </span>
+            <Menu size={24} aria-hidden="true" />
+          </button>
+          <Link to="/" className="site-logo" onClick={() => setMenuOpen(false)}>
+            <img src="/logo.webp" alt="Punjabi Number Plates" width="42" height="42" />
+            <span>Punjabi Number Plates</span>
           </Link>
+        </div>
 
-          {/* Desktop Nav Links */}
-          <div
-            className="hidden md:flex"
-            style={{
-              alignItems: 'center',
-              gap: '32px',
-            }}
-          >
-            {navLinks.map((link) => (
-              <NavLink key={link.label} to={link.to}>
-                {link.label}
-              </NavLink>
-            ))}
-          </div>
+        <div className="site-nav__links">
+          {primaryLinks.map((link) => (
+            <NavLink key={link.to} to={link.to}>
+              {link.label}
+            </NavLink>
+          ))}
+        </div>
 
-          {/* Utility Icons */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '8px' : '16px' }}>
-            <button
-              aria-label="Search"
-              className="hidden md:block"
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '4px',
-                color: '#f2f3f4',
-                transition: 'color 0.3s ease',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#ffd700')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = '#f2f3f4')}
-            >
-              <Search size={20} strokeWidth={1.5} />
-            </button>
-            <button
-              aria-label="Account"
-              className="hidden md:block"
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '4px',
-                color: '#f2f3f4',
-                transition: 'color 0.3s ease',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#ffd700')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = '#f2f3f4')}
-            >
-              <User size={20} strokeWidth={1.5} />
-            </button>
-            <button
-              onClick={() => openCart()}
-              style={{
-                position: 'relative',
-                color: '#f2f3f4',
-                transition: 'color 0.3s ease',
-                display: 'flex',
-                alignItems: 'center',
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                padding: '4px',
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#ffd700')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = '#f2f3f4')}
-            >
-              <ShoppingBag size={isMobile ? 18 : 20} strokeWidth={1.5} />
-              {cartCount > 0 && (
-                <span
-                  style={{
-                    position: 'absolute',
-                    top: '-4px',
-                    right: '-6px',
-                    minWidth: '16px',
-                    height: '16px',
-                    backgroundColor: '#ffd700',
-                    borderRadius: '50%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontFamily: "'JetBrains Mono', monospace",
-                    fontSize: '0.65rem',
-                    fontWeight: 700,
-                    color: '#050401',
-                    padding: '0 4px',
-                  }}
-                >
-                  {cartCount > 9 ? '9+' : cartCount}
-                </span>
-              )}
-            </button>
-            {/* Mobile hamburger */}
-            <button
-              className="md:hidden"
-              aria-label="Menu"
-              onClick={() => setMobileOpen(!mobileOpen)}
-              style={{
-                background: 'none',
-                border: 'none',
-                cursor: 'pointer',
-                color: '#f2f3f4',
-                padding: '4px',
-              }}
-            >
-              {mobileOpen ? <X size={isMobile ? 20 : 24} /> : <Menu size={isMobile ? 20 : 24} />}
-            </button>
-          </div>
+        <div className="site-nav__actions">
+          <button type="button" className="icon-button" onClick={openCart} aria-label="Open cart">
+            <ShoppingBag size={22} aria-hidden="true" />
+            {cartCount > 0 && <span>{cartCount > 9 ? '9+' : cartCount}</span>}
+          </button>
         </div>
       </nav>
 
-      {/* Announcement Ticker */}
-      <div
-        style={{
-          position: 'fixed',
-          top: '64px',
-          left: 0,
-          width: '100%',
-          height: '40px',
-          backgroundColor: '#111111',
-          borderBottom: '1px solid #222222',
-          zIndex: 999,
-          display: 'flex',
-          alignItems: 'center',
-        }}
-      >
-        <Marquee
-          speed={40}
-          gradient={false}
-          style={{ overflow: 'hidden' }}
-        >
-          <span
-            style={{
-              fontFamily: 'JetBrains Mono, monospace',
-              fontSize: '0.8rem',
-              letterSpacing: '0.15em',
-              color: '#757575',
-              paddingRight: '48px',
-            }}
-          >
-            FOLLOW US ON INSTAGRAM @PUNJABINUMBERPLATES — IN-STORE PICKUP AVAILABLE — ALL PREMIUM CATEGORIES WITH HIGH DISCOUNTS — FOLLOW US ON INSTAGRAM @PUNJABINUMBERPLATES — IN-STORE PICKUP AVAILABLE — ALL PREMIUM CATEGORIES WITH HIGH DISCOUNTS —
-          </span>
-        </Marquee>
-      </div>
-
-      {/* Mobile Menu Overlay */}
-      {mobileOpen && (
-        <div
-          style={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100%',
-            height: '100%',
-            backgroundColor: 'rgba(17, 17, 17, 0.98)',
-            zIndex: 1001,
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '32px',
-            backdropFilter: 'blur(20px)',
-          }}
-        >
+      {menuOpen &&
+        createPortal(
+          <div className="category-menu" role="dialog" aria-modal="true" aria-label="Shop categories">
           <button
-            onClick={() => setMobileOpen(false)}
-            style={{
-              position: 'absolute',
-              top: '16px',
-              right: '24px',
-              background: 'none',
-              border: 'none',
-              color: '#f2f3f4',
-              cursor: 'pointer',
-            }}
+            type="button"
+            className="category-menu__backdrop"
+            onClick={() => setMenuOpen(false)}
+            aria-label="Close category menu"
+          />
+          <button
+            type="button"
+            className="icon-button category-menu__close"
+            onClick={() => setMenuOpen(false)}
+            aria-label="Close menu"
           >
-            <X size={28} />
+            <X size={24} aria-hidden="true" />
           </button>
-          {navLinks.map((link) => (
-            <Link
-              key={link.label}
-              to={link.to}
-              onClick={() => setMobileOpen(false)}
-              style={{
-                fontFamily: 'Inter, system-ui, sans-serif',
-                fontWeight: 700,
-                fontSize: '1.5rem',
-                color: '#f2f3f4',
-                textDecoration: 'none',
-                letterSpacing: '-0.72px',
-                textTransform: 'uppercase',
-              }}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </div>
-      )}
-    </>
-  )
-}
-
-function NavLink({ to, children }: { to: string; children: React.ReactNode }) {
-  const [hovered, setHovered] = useState(false)
-
-  return (
-    <Link
-      to={to}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
-      style={{
-        position: 'relative',
-        fontFamily: 'Inter, system-ui, sans-serif',
-        fontWeight: 400,
-        fontSize: '1rem',
-        letterSpacing: '-0.24px',
-        color: '#f2f3f4',
-        textDecoration: 'none',
-        textTransform: 'uppercase',
-        paddingBottom: '4px',
-      }}
-    >
-      {children}
-      <span
-        style={{
-          position: 'absolute',
-          bottom: 0,
-          left: '50%',
-          transform: hovered ? 'translateX(-50%) scaleX(1)' : 'translateX(-50%) scaleX(0)',
-          width: '100%',
-          height: '1px',
-          backgroundColor: '#ffd700',
-          transition: 'transform 0.3s cubic-bezier(0.23, 1, 0.32, 1)',
-        }}
-      />
-    </Link>
+          <div className="category-menu__sheet">
+            <div className="category-menu__header">
+              <p>Shop menu</p>
+              <h2>All categories</h2>
+            </div>
+            <div className="category-menu__grid">
+              {categories.map((category) => (
+                <Link
+                  key={category.slug}
+                  to={`/categories/${category.slug}`}
+                  onClick={() => setMenuOpen(false)}
+                >
+                  <span>{category.label}</span>
+                  <small>{category.description}</small>
+                </Link>
+              ))}
+            </div>
+            <div className="category-menu__footer">
+              <Link to="/" onClick={() => setMenuOpen(false)}>
+                Home
+              </Link>
+              <Link to="/contact" onClick={() => setMenuOpen(false)}>
+                Contact
+              </Link>
+            </div>
+          </div>
+        </div>,
+          document.body
+        )}
+    </header>
   )
 }
