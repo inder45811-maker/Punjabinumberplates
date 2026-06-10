@@ -48,7 +48,7 @@ export default function About() {
             letterSpacing: '-1.5px', color: '#f2f3f4', textTransform: 'uppercase',
             lineHeight: 1, marginBottom: '24px',
           }}>
-            PUNJABI NUMBER PLATES
+            THE NUMBER PLATE SHOP
           </h1>
           <p style={{
             fontFamily: 'Inter, system-ui, sans-serif', fontSize: '1.1rem',
@@ -93,7 +93,7 @@ export default function About() {
           <div>
             <img
               src="/pnp-07.webp"
-              alt="Punjabi Number Plates"
+              alt="The Number Plate Shop"
               style={{ width: '100%', height: 'auto', borderRadius: '8px', border: '1px solid #222222' }}
             />
           </div>

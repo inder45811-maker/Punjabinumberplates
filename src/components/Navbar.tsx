@@ -50,8 +50,8 @@ export default function Navbar() {
             <Menu size={24} aria-hidden="true" />
           </button>
           <Link to="/" className="site-logo" onClick={() => setMenuOpen(false)}>
-            <img src="/logo.webp" alt="Punjabi Number Plates" width="42" height="42" />
-            <span>Punjabi Number Plates</span>
+            <img src="/logo-tnps.svg" alt="The Number Plate Shop" width="42" height="42" />
+            <span>The Number Plate Shop</span>
           </Link>
         </div>
 

@@ -133,6 +133,9 @@ const REVIEW_ATTRIBUTE_ORDER = [
   '_plate_type',
   '_plate_style',
   '_configuration',
+  '_sign_text',
+  '_writing_colour',
+  '_background_colour',
   '_customer_notes',
   'Registration',
   'Text',
@@ -281,7 +284,7 @@ function buildCartNote(
     : ['No documents uploaded on this order.']
 
   return [
-    'Punjabi Number Plates pre-checkout details',
+    'The Number Plate Shop pre-checkout details',
     `Customer: ${customer.fullName.trim()}`,
     `Email: ${customer.email.trim()}`,
     `Phone: ${customer.phone.trim()}`,

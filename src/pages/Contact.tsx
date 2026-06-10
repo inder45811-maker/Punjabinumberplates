@@ -646,7 +646,7 @@ function ContactFormAndStore() {
               lineHeight: 1.7,
             }}
           >
-            <div>PUNJABI NUMBER PLATES</div>
+            <div>THE NUMBER PLATE SHOP</div>
             <div>Unit 7, PNP Industrial Estate</div>
             <div>47-49 Northern Road</div>
             <div>London, N7 9BG</div>
@@ -1174,7 +1174,7 @@ function CTABanner() {
             lineHeight: 1.6,
           }}
         >
-          PUNJABI NUMBER PLATES, Unit 7, PNP Industrial Estate, 47-49 Northern Road,
+          THE NUMBER PLATE SHOP, Unit 7, PNP Industrial Estate, 47-49 Northern Road,
           London N7 9BG
         </p>
         <div

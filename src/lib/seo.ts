@@ -2,7 +2,7 @@ import { useEffect } from 'react'
 import type { MoneyV2, StorefrontImage, StorefrontProduct, StorefrontVariant } from './shopify'
 
 export const SITE_URL = 'https://www.punjabinumberplates.co.uk'
-export const SITE_NAME = 'Punjabi Number Plates'
+export const SITE_NAME = 'The Number Plate Shop'
 
 interface SeoInput {
   title: string
@@ -68,7 +68,7 @@ export function organizationSchema() {
     '@type': 'Organization',
     name: SITE_NAME,
     url: SITE_URL,
-    logo: `${SITE_URL}/logo.webp`,
+    logo: `${SITE_URL}/logo-tnps.svg`,
     contactPoint: {
       '@type': 'ContactPoint',
       contactType: 'customer service',
@@ -110,5 +110,5 @@ export function productSchema(input: {
 
 export function productAlt(product: StorefrontProduct, variantLabel?: string) {
   const label = variantLabel && variantLabel !== 'Default Title' ? `${product.title} ${variantLabel}` : product.title
-  return `${label} custom product preview from Punjabi Number Plates`
+  return `${label} custom product preview from The Number Plate Shop`
 }

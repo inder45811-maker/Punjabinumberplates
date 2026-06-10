@@ -28,10 +28,26 @@ import { useCart } from '../context/CartContext'
 
 type PlateType = 'Road Legal' | 'Show Plate'
 type PlateSide = 'front' | 'rear'
+type ProductKind = 'plate' | 'holder' | 'house-sign'
 
 function defaultPlateType(product: StorefrontProduct | null): PlateType {
   const title = product?.title.toLowerCase() ?? ''
   return title.includes('show') ? 'Show Plate' : 'Road Legal'
+}
+
+function productKindFor(product: StorefrontProduct | null): ProductKind {
+  const text = `${product?.title ?? ''} ${product?.productType ?? ''}`.toLowerCase()
+  if (/house[\s-]?(sign|plate)/.test(text)) return 'house-sign'
+  if (text.includes('holder') || text.includes('surround')) return 'holder'
+  return 'plate'
+}
+
+// Shopify products can carry their own front/rear option (e.g. "Amount of 2D
+// printed plates"). When one exists it drives variant pricing, so the builder's
+// hardcoded Configuration card would duplicate it.
+function isConfigurationOption(option: { name: string; values: string[] }) {
+  if (option.values.length < 2) return false
+  return option.values.every((value) => /\b(front|rear|back)\b/i.test(value))
 }
 
 function selectedOptionsFromVariant(variant: StorefrontVariant | null) {
@@ -52,6 +68,9 @@ export default function BuilderPage() {
   const [plateType, setPlateType] = useState<PlateType>('Road Legal')
   const [plateSide, setPlateSide] = useState<PlateSide>('rear')
   const [configuration, setConfiguration] = useState('Front and Rear')
+  const [signText, setSignText] = useState('')
+  const [writingColour, setWritingColour] = useState('')
+  const [backgroundColour, setBackgroundColour] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [notes, setNotes] = useState('')
   const [isLoading, setIsLoading] = useState(Boolean(productHandle))
@@ -64,8 +83,8 @@ export default function BuilderPage() {
 
   useSeo({
     title: product?.seo?.title || product?.title
-      ? `${product?.seo?.title || product?.title} | Punjabi Number Plates`
-      : 'Interactive Plate Builder | Punjabi Number Plates',
+      ? `${product?.seo?.title || product?.title} | The Number Plate Shop`
+      : 'Interactive Plate Builder | The Number Plate Shop',
     description:
       product?.seo?.description ||
       product?.description ||
@@ -125,9 +144,26 @@ export default function BuilderPage() {
     [product]
   )
 
+  const productKind = productKindFor(product)
+  const isHouseSign = productKind === 'house-sign'
+  const showPlatePreview = productKind === 'plate'
+  const configOption = useMemo(
+    () => visibleOptions.find((option) => isConfigurationOption(option)),
+    [visibleOptions]
+  )
+  // House signs may already carry colour options in Shopify (variant-priced);
+  // only show free-text colour boxes when Shopify does not provide them.
+  const hasShopifyBackgroundColour = visibleOptions.some(
+    (option) => /background/i.test(option.name) && /colou?r/i.test(option.name)
+  )
+  const hasShopifyWritingColour = visibleOptions.some(
+    (option) => /(writing|text|letter)/i.test(option.name) && /colou?r/i.test(option.name)
+  )
+
   const currentPrice = variant ? money(variant.price) : 'Unavailable'
   const productPreviewImage = product ? productImage(product, variant) : null
   const checkoutBusy = cartLoading || isPreparingCheckout
+  const requiredTextMissing = isHouseSign ? !signText.trim() : !registration.trim()
 
   const updateOption = (name: string, value: string) => {
     if (!product) return
@@ -147,10 +183,13 @@ export default function BuilderPage() {
         merchandiseId: variant.id,
         quantity,
         attributes: customLineAttributes({
-          registration,
+          registration: isHouseSign ? undefined : registration,
           plateStyle: styleLabel,
-          plateType,
-          configuration,
+          plateType: isHouseSign ? undefined : plateType,
+          configuration: isHouseSign || configOption ? undefined : configuration,
+          signText: isHouseSign ? signText : undefined,
+          writingColour: isHouseSign ? writingColour : undefined,
+          backgroundColour: isHouseSign ? backgroundColour : undefined,
           notes,
           selectedOptions: variant.selectedOptions,
         }),
@@ -215,23 +254,27 @@ export default function BuilderPage() {
 
         <section className="builder-workspace">
           <div className="builder-preview-panel">
-            <PlatePreview registration={registration} styleLabel={styleLabel} side={plateSide} />
-            <div className="builder-side-toggle" aria-label="Plate side preview">
-              <button
-                type="button"
-                className={plateSide === 'front' ? 'is-active' : ''}
-                onClick={() => setPlateSide('front')}
-              >
-                Front
-              </button>
-              <button
-                type="button"
-                className={plateSide === 'rear' ? 'is-active' : ''}
-                onClick={() => setPlateSide('rear')}
-              >
-                Rear
-              </button>
-            </div>
+            {showPlatePreview && (
+              <>
+                <PlatePreview registration={registration} styleLabel={styleLabel} side={plateSide} />
+                <div className="builder-side-toggle" aria-label="Plate side preview">
+                  <button
+                    type="button"
+                    className={plateSide === 'front' ? 'is-active' : ''}
+                    onClick={() => setPlateSide('front')}
+                  >
+                    Front
+                  </button>
+                  <button
+                    type="button"
+                    className={plateSide === 'rear' ? 'is-active' : ''}
+                    onClick={() => setPlateSide('rear')}
+                  >
+                    Rear
+                  </button>
+                </div>
+              </>
+            )}
             {productPreviewImage && (
               <img
                 className="builder-product-image"
@@ -239,7 +282,7 @@ export default function BuilderPage() {
                 alt={productAlt(product, variant?.title)}
                 width={productPreviewImage.width ?? 900}
                 height={productPreviewImage.height ?? 675}
-                loading="lazy"
+                loading={showPlatePreview ? 'lazy' : 'eager'}
                 decoding="async"
               />
             )}
@@ -259,54 +302,114 @@ export default function BuilderPage() {
               </div>
             )}
 
-            <section className="builder-card" aria-labelledby="registration-heading">
-              <h2 id="registration-heading">Registration text</h2>
-              <label className="field-label" htmlFor="registration">
-                Enter the exact spacing required
-              </label>
-              <input
-                id="registration"
-                className="builder-input"
-                value={registration}
-                onChange={(event) => setRegistration(event.target.value)}
-                maxLength={12}
-                placeholder="X24 GUR"
-                autoComplete="off"
-              />
-            </section>
+            {isHouseSign ? (
+              <>
+                <section className="builder-card" aria-labelledby="sign-text-heading">
+                  <h2 id="sign-text-heading">Name &amp; address for your sign</h2>
+                  <label className="field-label" htmlFor="sign-text">
+                    Write down the exact name and address you want on the sign
+                  </label>
+                  <textarea
+                    id="sign-text"
+                    className="builder-input builder-textarea"
+                    value={signText}
+                    onChange={(event) => setSignText(event.target.value)}
+                    placeholder="SANGHA&#10;15 Hamilton Drive"
+                  />
+                </section>
 
-            <section className="builder-card" aria-labelledby="plate-type-heading">
-              <h2 id="plate-type-heading">Plate use</h2>
-              <div className="segmented-control">
-                {(['Road Legal', 'Show Plate'] satisfies PlateType[]).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    className={plateType === type ? 'is-active' : ''}
-                    onClick={() => setPlateType(type)}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-            </section>
+                {(!hasShopifyWritingColour || !hasShopifyBackgroundColour) && (
+                  <section className="builder-card" aria-labelledby="sign-colours-heading">
+                    <h2 id="sign-colours-heading">Sign colours</h2>
+                    {!hasShopifyWritingColour && (
+                      <>
+                        <label className="field-label" htmlFor="writing-colour">
+                          Colour of writing
+                        </label>
+                        <input
+                          id="writing-colour"
+                          className="builder-input"
+                          value={writingColour}
+                          onChange={(event) => setWritingColour(event.target.value)}
+                          maxLength={40}
+                          placeholder="e.g. Gold"
+                          autoComplete="off"
+                        />
+                      </>
+                    )}
+                    {!hasShopifyBackgroundColour && (
+                      <>
+                        <label className="field-label" htmlFor="background-colour">
+                          Background colour
+                        </label>
+                        <input
+                          id="background-colour"
+                          className="builder-input"
+                          value={backgroundColour}
+                          onChange={(event) => setBackgroundColour(event.target.value)}
+                          maxLength={40}
+                          placeholder="e.g. Black"
+                          autoComplete="off"
+                        />
+                      </>
+                    )}
+                  </section>
+                )}
+              </>
+            ) : (
+              <section className="builder-card" aria-labelledby="registration-heading">
+                <h2 id="registration-heading">Registration text</h2>
+                <label className="field-label" htmlFor="registration">
+                  Enter the exact spacing required
+                </label>
+                <input
+                  id="registration"
+                  className="builder-input"
+                  value={registration}
+                  onChange={(event) => setRegistration(event.target.value)}
+                  maxLength={12}
+                  placeholder="X24 GUR"
+                  autoComplete="off"
+                />
+              </section>
+            )}
 
-            <section className="builder-card" aria-labelledby="configuration-heading">
-              <h2 id="configuration-heading">Configuration</h2>
-              <div className="option-grid option-grid--three">
-                {['Front and Rear', 'Front Only', 'Rear Only'].map((item) => (
-                  <button
-                    key={item}
-                    type="button"
-                    className={configuration === item ? 'option-tile is-active' : 'option-tile'}
-                    onClick={() => setConfiguration(item)}
-                  >
-                    <Check size={16} aria-hidden="true" />
-                    {item}
-                  </button>
-                ))}
-              </div>
-            </section>
+            {!isHouseSign && (
+              <section className="builder-card" aria-labelledby="plate-type-heading">
+                <h2 id="plate-type-heading">Plate use</h2>
+                <div className="segmented-control">
+                  {(['Road Legal', 'Show Plate'] satisfies PlateType[]).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      className={plateType === type ? 'is-active' : ''}
+                      onClick={() => setPlateType(type)}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {productKind === 'plate' && !configOption && (
+              <section className="builder-card" aria-labelledby="configuration-heading">
+                <h2 id="configuration-heading">Configuration</h2>
+                <div className="option-grid option-grid--three">
+                  {['Front and Rear', 'Front Only', 'Rear Only'].map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      className={configuration === item ? 'option-tile is-active' : 'option-tile'}
+                      onClick={() => setConfiguration(item)}
+                    >
+                      <Check size={16} aria-hidden="true" />
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </section>
+            )}
 
             {visibleOptions.map((option) => {
               const optionId = `${option.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-heading`
@@ -364,7 +467,7 @@ export default function BuilderPage() {
                 type="button"
                 className="button-primary builder-checkout"
                 onClick={handleCheckout}
-                disabled={!variant || checkoutBusy || !registration.trim()}
+                disabled={!variant || checkoutBusy || requiredTextMissing}
               >
                 {checkoutBusy ? (
                   <>
@@ -389,7 +492,7 @@ export default function BuilderPage() {
           type="button"
           className="button-primary"
           onClick={handleCheckout}
-          disabled={!variant || checkoutBusy || !registration.trim()}
+          disabled={!variant || checkoutBusy || requiredTextMissing}
         >
           {checkoutBusy ? 'Preparing' : 'Checkout'}
         </button>

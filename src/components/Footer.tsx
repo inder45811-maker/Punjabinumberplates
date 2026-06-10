@@ -7,8 +7,8 @@ export default function Footer() {
       <div className="section-shell site-footer__grid">
         <div>
           <Link to="/" className="site-logo site-logo--footer">
-            <img src="/logo.webp" alt="Punjabi Number Plates" width="40" height="40" />
-            <span>Punjabi Number Plates</span>
+            <img src="/logo-tnps.svg" alt="The Number Plate Shop" width="40" height="40" />
+            <span>The Number Plate Shop</span>
           </Link>
           <p>
             Premium custom number plates, plate holders, accessories, and gifts with
@@ -44,7 +44,7 @@ export default function Footer() {
         </div>
       </div>
       <div className="site-footer__bottom">
-        <span>Punjabi Number Plates 2026</span>
+        <span>The Number Plate Shop 2026</span>
       </div>
     </footer>
   )

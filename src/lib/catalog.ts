@@ -14,6 +14,8 @@ export interface CategoryDefinition {
   collectionHandles: string[]
   seoTitle: string
   seoDescription: string
+  /** Local image that overrides the Shopify preview on the category tile. */
+  previewImage?: string
 }
 
 export const categories = [
@@ -23,19 +25,20 @@ export const categories = [
     shortLabel: 'Plates',
     description: 'Road legal and show plate styles pulled live from Shopify.',
     collectionHandles: ['road-legal-number-plates', 'showplates'],
-    seoTitle: 'Custom 3D Gel & 4D Number Plates | Punjabi Number Plates',
+    seoTitle: 'Custom 3D Gel & 4D Number Plates | The Number Plate Shop',
     seoDescription:
-      'Shop custom road legal and show number plates from Punjabi Number Plates with live Shopify prices and secure checkout.',
+      'Shop custom road legal and show number plates from The Number Plate Shop with live Shopify prices and secure checkout.',
   },
   {
     slug: 'plate-holders',
-    label: 'Luxury Signature Plate Holders',
+    label: 'Luxury Plate Holders & 3D Gel Holders',
     shortLabel: 'Plate Holders',
-    description: 'Premium surround and holder options for a sharper finish.',
+    description: 'Premium 3D gel plate holders — one for £45 or two for £85.',
     collectionHandles: ['plate-holders'],
-    seoTitle: 'Premium Plate Holders & Luxury Surrounds | Punjabi Number Plates',
+    seoTitle: 'Luxury Plate Holders & 3D Gel Holders | The Number Plate Shop',
     seoDescription:
-      'Browse luxury signature plate holders and surrounds with real-time Shopify pricing from Punjabi Number Plates.',
+      'Browse luxury plate holders and 3D gel holders with real-time Shopify pricing from The Number Plate Shop.',
+    previewImage: '/plate-holders/bhandal-holders.jpg',
   },
   {
     slug: 'keyrings',
@@ -43,9 +46,9 @@ export const categories = [
     shortLabel: 'Keyrings',
     description: 'Personalised keyrings will appear here as soon as they are live in Shopify.',
     collectionHandles: ['keyrings'],
-    seoTitle: 'Custom Number Plate Keyrings | Punjabi Number Plates',
+    seoTitle: 'Custom Number Plate Keyrings | The Number Plate Shop',
     seoDescription:
-      'Personalised number plate keyrings from Punjabi Number Plates, powered by live Shopify catalogue data.',
+      'Personalised number plate keyrings from The Number Plate Shop, powered by live Shopify catalogue data.',
   },
   {
     slug: 'accessories',
@@ -53,9 +56,9 @@ export const categories = [
     shortLabel: 'Accessories',
     description: 'Badges, decals, and finishing details for custom builds.',
     collectionHandles: ['accessories'],
-    seoTitle: 'Number Plate Accessories & Badges | Punjabi Number Plates',
+    seoTitle: 'Number Plate Accessories & Badges | The Number Plate Shop',
     seoDescription:
-      'Shop number plate accessories, symbols, badges, and decals from Punjabi Number Plates.',
+      'Shop number plate accessories, symbols, badges, and decals from The Number Plate Shop.',
   },
   {
     slug: 'car-hangings',
@@ -63,9 +66,9 @@ export const categories = [
     shortLabel: 'Car Hangings',
     description: 'Interior hanging accessories synced from the Shopify catalogue.',
     collectionHandles: ['car-hangings'],
-    seoTitle: 'Custom Car Hangings | Punjabi Number Plates',
+    seoTitle: 'Custom Car Hangings | The Number Plate Shop',
     seoDescription:
-      'Browse custom car hangings from Punjabi Number Plates with live availability from Shopify.',
+      'Browse custom car hangings from The Number Plate Shop with live availability from Shopify.',
   },
   {
     slug: 'house-plates',
@@ -73,9 +76,9 @@ export const categories = [
     shortLabel: 'House Plates',
     description: 'Punjabi house signs and address plates with premium finishes.',
     collectionHandles: ['4d-laser-cut-house-signs'],
-    seoTitle: 'Punjabi House Plates & 4D House Signs | Punjabi Number Plates',
+    seoTitle: 'Punjabi House Plates & 4D House Signs | The Number Plate Shop',
     seoDescription:
-      'Shop Punjabi house plates, Sikh Khanda signs, and 4D laser cut house signs from Punjabi Number Plates.',
+      'Shop Punjabi house plates, Sikh Khanda signs, and 4D laser cut house signs from The Number Plate Shop.',
   },
 ] satisfies CategoryDefinition[]
 

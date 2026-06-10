@@ -51,7 +51,7 @@ export default function PlatePreview({
           </span>
         </div>
         <span className="plate-preview__maker" aria-hidden="true">
-          PUNJABI NUMBER PLATES
+          THE NUMBER PLATE SHOP
         </span>
         <span className="plate-preview__bsau" aria-hidden="true">
           BSAU145e

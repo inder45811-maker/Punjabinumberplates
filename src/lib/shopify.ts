@@ -455,17 +455,26 @@ export function customLineAttributes(input: {
   plateStyle?: string
   plateType?: string
   configuration?: string
+  signText?: string
+  writingColour?: string
+  backgroundColour?: string
   notes?: string
   selectedOptions?: StorefrontSelectedOption[]
 }) {
   const attrs: Attribute[] = []
   const registration = input.registration?.trim().toUpperCase()
+  const signText = input.signText?.trim()
+  const writingColour = input.writingColour?.trim()
+  const backgroundColour = input.backgroundColour?.trim()
   const notes = input.notes?.trim()
 
   if (registration) attrs.push({ key: '_registration', value: registration })
   if (input.plateStyle) attrs.push({ key: '_plate_style', value: input.plateStyle })
   if (input.plateType) attrs.push({ key: '_plate_type', value: input.plateType })
   if (input.configuration) attrs.push({ key: '_configuration', value: input.configuration })
+  if (signText) attrs.push({ key: '_sign_text', value: signText })
+  if (writingColour) attrs.push({ key: '_writing_colour', value: writingColour })
+  if (backgroundColour) attrs.push({ key: '_background_colour', value: backgroundColour })
   if (notes) attrs.push({ key: '_customer_notes', value: notes })
 
   input.selectedOptions?.forEach((option) => {

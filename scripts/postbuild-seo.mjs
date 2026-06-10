@@ -9,57 +9,57 @@ const defaultImage = `${siteUrl}/pnp-collection-hero.webp`
 const routes = [
   {
     path: '/',
-    title: 'Custom 3D Gel & 4D Laser Cut Number Plates | Punjabi Number Plates',
+    title: 'CUSTOM MADE PLATES & 4D NUMBER PLATES | +20 Styles to Choose from',
     description:
-      'Shop premium road legal and show plates, plate holders, accessories, car hangings, and house plates from Punjabi Number Plates.',
+      'Shop premium road legal and show plates, plate holders, accessories, car hangings, and house plates from The Number Plate Shop.',
   },
   {
     path: '/categories/number-plates',
-    title: 'Custom 3D Gel & 4D Number Plates | Punjabi Number Plates',
+    title: 'Custom 3D Gel & 4D Number Plates | The Number Plate Shop',
     description:
-      'Shop custom road legal and show number plates from Punjabi Number Plates with live Shopify prices and secure checkout.',
+      'Shop custom road legal and show number plates from The Number Plate Shop with live Shopify prices and secure checkout.',
   },
   {
     path: '/categories/plate-holders',
-    title: 'Premium Plate Holders & Luxury Surrounds | Punjabi Number Plates',
+    title: 'Luxury Plate Holders & 3D Gel Holders | The Number Plate Shop',
     description:
-      'Browse luxury signature plate holders and surrounds with real-time Shopify pricing from Punjabi Number Plates.',
+      'Browse luxury plate holders and 3D gel holders with real-time Shopify pricing from The Number Plate Shop.',
   },
   {
     path: '/categories/keyrings',
-    title: 'Custom Number Plate Keyrings | Punjabi Number Plates',
+    title: 'Custom Number Plate Keyrings | The Number Plate Shop',
     description:
-      'Personalised number plate keyrings from Punjabi Number Plates, powered by live Shopify catalogue data.',
+      'Personalised number plate keyrings from The Number Plate Shop, powered by live Shopify catalogue data.',
   },
   {
     path: '/categories/accessories',
-    title: 'Number Plate Accessories & Badges | Punjabi Number Plates',
+    title: 'Number Plate Accessories & Badges | The Number Plate Shop',
     description:
-      'Shop number plate accessories, symbols, badges, and decals from Punjabi Number Plates.',
+      'Shop number plate accessories, symbols, badges, and decals from The Number Plate Shop.',
   },
   {
     path: '/categories/car-hangings',
-    title: 'Custom Car Hangings | Punjabi Number Plates',
+    title: 'Custom Car Hangings | The Number Plate Shop',
     description:
-      'Browse custom car hangings from Punjabi Number Plates with live availability from Shopify.',
+      'Browse custom car hangings from The Number Plate Shop with live availability from Shopify.',
   },
   {
     path: '/categories/house-plates',
-    title: 'Punjabi House Plates & 4D House Signs | Punjabi Number Plates',
+    title: 'Punjabi House Plates & 4D House Signs | The Number Plate Shop',
     description:
-      'Shop Punjabi house plates, Sikh Khanda signs, and 4D laser cut house signs from Punjabi Number Plates.',
+      'Shop Punjabi house plates, Sikh Khanda signs, and 4D laser cut house signs from The Number Plate Shop.',
   },
   {
     path: '/builder',
-    title: 'Interactive Plate Builder | Punjabi Number Plates',
+    title: 'Interactive Plate Builder | The Number Plate Shop',
     description:
       'Build a custom road legal or show plate and checkout securely through Shopify.',
   },
   {
     path: '/checkout',
-    title: 'Secure Checkout | Punjabi Number Plates',
+    title: 'Secure Checkout | The Number Plate Shop',
     description:
-      'Review your Punjabi Number Plates order, upload compliance documents when required, and continue to secure Shopify checkout.',
+      'Review your order from The Number Plate Shop, upload compliance documents when required, and continue to secure Shopify checkout.',
   },
 ]
 

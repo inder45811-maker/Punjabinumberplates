@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="The Number Plate Shop logo">
+  <circle cx="120" cy="120" r="118" fill="#0a0a0a" />
+  <circle cx="120" cy="120" r="106" fill="none" stroke="#ffffff" stroke-width="5" />
+  <rect x="26" y="96" width="138" height="40" rx="6" fill="#ffd500" stroke="#ffffff" stroke-width="3" />
+  <text
+    x="95"
+    y="123"
+    text-anchor="middle"
+    font-family="Arial, Helvetica, sans-serif"
+    font-weight="900"
+    font-size="17"
+    fill="#000000"
+    textLength="124"
+    lengthAdjust="spacingAndGlyphs"
+  >THE NUMBER PLATE</text>
+  <text
+    x="170"
+    y="127"
+    text-anchor="start"
+    font-family="Arial, Helvetica, sans-serif"
+    font-weight="900"
+    font-size="27"
+    fill="#ffffff"
+  >SHOP</text>
+  <line x1="40" y1="152" x2="200" y2="152" stroke="#ffffff" stroke-width="1.5" />
+  <text
+    x="120"
+    y="167"
+    text-anchor="middle"
+    font-family="Arial, Helvetica, sans-serif"
+    font-weight="700"
+    font-size="9.5"
+    letter-spacing="2.5"
+    fill="#ffffff"
+  >NUMBER PLATE SPECIALISTS</text>
+</svg>

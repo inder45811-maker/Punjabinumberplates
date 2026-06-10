@@ -27,9 +27,9 @@ export default function Home() {
   const [previews, setPreviews] = useState<CategoryPreviewMap>({})
 
   useSeo({
-    title: 'Custom 3D Gel & 4D Laser Cut Number Plates | Punjabi Number Plates',
+    title: 'CUSTOM MADE PLATES & 4D NUMBER PLATES | +20 Styles to Choose from',
     description:
-      'Shop premium road legal and show plates, plate holders, accessories, car hangings, and house plates from Punjabi Number Plates.',
+      'Shop premium road legal and show plates, plate holders, accessories, car hangings, and house plates from The Number Plate Shop.',
     path: '/',
     jsonLd: organizationSchema(),
   })
@@ -78,9 +78,9 @@ export default function Home() {
         />
         <div className="hero-home__overlay" />
         <div className="hero-home__content">
-          <img src="/logo.webp" alt="Punjabi Number Plates logo" width="72" height="72" />
+          <img src="/logo-tnps.svg" alt="The Number Plate Shop logo" width="72" height="72" />
           <p>Custom plates made simple</p>
-          <h1>Bespoke Custom & 4D Number Plates | Punjabi Number Plates</h1>
+          <h1>Custom Made Plates & 4D Number Plates | +20 Styles to Choose from</h1>
           <div className="hero-home__actions">
             <Link to="/categories/number-plates" className="button-primary">
               Start your plate

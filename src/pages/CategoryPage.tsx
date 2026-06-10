@@ -18,10 +18,10 @@ export default function CategoryPage() {
   const [error, setError] = useState<string | null>(null)
 
   useSeo({
-    title: category?.seoTitle ?? 'Shop Categories | Punjabi Number Plates',
+    title: category?.seoTitle ?? 'Shop Categories | The Number Plate Shop',
     description:
       category?.seoDescription ??
-      'Browse live Shopify categories from Punjabi Number Plates.',
+      'Browse live Shopify categories from The Number Plate Shop.',
     path: category ? `/categories/${category.slug}` : '/categories',
   })
 

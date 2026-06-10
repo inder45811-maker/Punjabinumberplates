@@ -29,10 +29,19 @@ export default function CategoryGrid({ previews = {} }: CategoryGridProps) {
                 className="category-tile group"
               >
                 <div className="category-tile__media">
-                  {preview ? (
+                  {category.previewImage ? (
+                    <img
+                      src={category.previewImage}
+                      alt={`${category.label} product preview from The Number Plate Shop`}
+                      width={640}
+                      height={480}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  ) : preview ? (
                     <img
                       src={imageUrl(preview, { width: 640 })}
-                      alt={`${category.label} product preview from Punjabi Number Plates`}
+                      alt={`${category.label} product preview from The Number Plate Shop`}
                       width={preview.width ?? 640}
                       height={preview.height ?? 480}
                       loading="lazy"
