@@ -18,6 +18,7 @@ import { useCart, type PendingDocuments } from '../context/CartContext'
 import {
   cartAttributesUpdate,
   cartBuyerIdentityUpdate,
+  cartNoteUpdate,
   type Attribute,
   type Cart,
 } from '../lib/shopify'
@@ -253,11 +254,53 @@ function buildCartAttributes(
     attributes.push(
       { key: `${document.key}_url`, value: document.url },
       { key: `${document.key}_file_name`, value: document.fileName },
-      { key: `${document.key}_cloudinary_id`, value: document.publicId }
+      { key: `${document.key}_cloudinary_id`, value: document.publicId },
+      { key: `${document.label} URL`, value: document.url },
+      { key: `${document.label} file name`, value: document.fileName }
     )
   })
 
   return attributes
+}
+
+function buildCartNote(
+  cart: Cart,
+  customer: CustomerDetails,
+  documentsRequired: boolean,
+  uploadedDocuments: UploadedDocument[]
+) {
+  const metadata = collectCartMetadata(cart)
+  const lines = cart.lines.nodes.map((line) => {
+    const attrs = orderedReviewAttributes(line)
+      .map((attr) => `${attr.key}: ${attr.value}`)
+      .join('; ')
+    return `- ${line.quantity}x ${line.merchandise.product.title}${attrs ? ` (${attrs})` : ''}`
+  })
+  const documents = uploadedDocuments.length
+    ? uploadedDocuments.map((document) => `${document.label}: ${document.url} (${document.fileName})`)
+    : ['No documents uploaded on this order.']
+
+  return [
+    'Punjabi Number Plates pre-checkout details',
+    `Customer: ${customer.fullName.trim()}`,
+    `Email: ${customer.email.trim()}`,
+    `Phone: ${customer.phone.trim()}`,
+    `Address: ${[customer.address1, customer.address2, customer.city, customer.postcode, customer.country]
+      .map((value) => value.trim())
+      .filter(Boolean)
+      .join(', ')}`,
+    `DVLA documents required: ${documentsRequired ? 'yes' : 'no'}`,
+    metadata.registrations ? `Registration(s): ${metadata.registrations}` : '',
+    metadata.plateTypes ? `Plate type(s): ${metadata.plateTypes}` : '',
+    metadata.notes ? `Customer notes: ${metadata.notes}` : '',
+    'Items:',
+    ...lines,
+    'Documents:',
+    ...documents,
+  ]
+    .filter(Boolean)
+    .join('\n')
+    .slice(0, 4800)
 }
 
 function countryToShopifyCode(country: string) {
@@ -387,6 +430,10 @@ export default function Checkout() {
       let updatedCart = await cartAttributesUpdate(
         cart.id,
         buildCartAttributes(cart, customer, requiresDocuments, uploadedDocuments)
+      )
+      updatedCart = await cartNoteUpdate(
+        updatedCart.id,
+        buildCartNote(cart, customer, requiresDocuments, uploadedDocuments)
       )
 
       try {

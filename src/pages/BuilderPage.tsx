@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
 import {
   AlertCircle,
@@ -55,7 +55,9 @@ export default function BuilderPage() {
   const [quantity, setQuantity] = useState(1)
   const [notes, setNotes] = useState('')
   const [isLoading, setIsLoading] = useState(Boolean(productHandle))
+  const [isPreparingCheckout, setIsPreparingCheckout] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const checkoutRequestRef = useRef(false)
 
   const image = product ? productImage(product, variant) : null
   const styleLabel = product ? readableStyleFromProductTitle(product.title) || product.title : 'Custom plate'
@@ -125,6 +127,7 @@ export default function BuilderPage() {
 
   const currentPrice = variant ? money(variant.price) : 'Unavailable'
   const productPreviewImage = product ? productImage(product, variant) : null
+  const checkoutBusy = cartLoading || isPreparingCheckout
 
   const updateOption = (name: string, value: string) => {
     if (!product) return
@@ -135,7 +138,9 @@ export default function BuilderPage() {
   }
 
   const handleCheckout = async () => {
-    if (!variant) return
+    if (!variant || checkoutRequestRef.current) return
+    checkoutRequestRef.current = true
+    setIsPreparingCheckout(true)
     clearError()
     try {
       await addToCart({
@@ -154,6 +159,9 @@ export default function BuilderPage() {
       navigate('/checkout')
     } catch {
       // Cart context exposes the error message in the builder panel.
+    } finally {
+      checkoutRequestRef.current = false
+      setIsPreparingCheckout(false)
     }
   }
 
@@ -356,9 +364,9 @@ export default function BuilderPage() {
                 type="button"
                 className="button-primary builder-checkout"
                 onClick={handleCheckout}
-                disabled={!variant || cartLoading || !registration.trim()}
+                disabled={!variant || checkoutBusy || !registration.trim()}
               >
-                {cartLoading ? (
+                {checkoutBusy ? (
                   <>
                     <Loader2 className="spin" size={18} aria-hidden="true" />
                     Preparing checkout
@@ -381,9 +389,9 @@ export default function BuilderPage() {
           type="button"
           className="button-primary"
           onClick={handleCheckout}
-          disabled={!variant || cartLoading || !registration.trim()}
+          disabled={!variant || checkoutBusy || !registration.trim()}
         >
-          Checkout
+          {checkoutBusy ? 'Preparing' : 'Checkout'}
         </button>
       </div>
     </main>

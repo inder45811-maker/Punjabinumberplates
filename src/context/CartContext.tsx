@@ -1,12 +1,12 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef, type ReactNode } from 'react'
-import type { Cart } from '../lib/shopify'
+import type { Attribute, Cart } from '../lib/shopify'
 import { createCart, addCartLines, removeCartLines, updateCartLines, getCart } from '../lib/shopify'
 
 /* ─── Types ─── */
 interface CartItem {
   merchandiseId: string
   quantity: number
-  attributes?: { key: string; value: string }[]
+  attributes?: Attribute[]
 }
 
 export interface PendingDocuments {
@@ -40,6 +40,21 @@ const EMPTY_PENDING_DOCUMENTS: PendingDocuments = {
 
 function errorMessage(err: unknown, fallback: string) {
   return err instanceof Error && err.message ? err.message : fallback
+}
+
+function normalizedAttributes(attributes: Attribute[] = []) {
+  return attributes
+    .filter((attribute) => attribute.value)
+    .map((attribute) => `${attribute.key.toLowerCase()}=${attribute.value}`)
+    .sort()
+    .join('|')
+}
+
+function lineMatchesItem(line: Cart['lines']['nodes'][number], item: CartItem) {
+  return (
+    line.merchandise.id === item.merchandiseId &&
+    normalizedAttributes(line.attributes) === normalizedAttributes(item.attributes)
+  )
 }
 
 export function CartProvider({ children }: { children: ReactNode }) {
@@ -86,7 +101,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       setError(null)
       try {
         if (cart) {
-          const updated = await addCartLines(cart.id, [item])
+          const existingLine = cart.lines.nodes.find((line) => lineMatchesItem(line, item))
+          const updated = existingLine
+            ? await updateCartLines(cart.id, [{ id: existingLine.id, quantity: item.quantity }])
+            : await addCartLines(cart.id, [item])
           persistCart(updated)
         } else {
           const created = await createCart([item])

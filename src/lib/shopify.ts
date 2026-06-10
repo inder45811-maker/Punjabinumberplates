@@ -576,6 +576,28 @@ export async function cartAttributesUpdate(
   return data.cartAttributesUpdate.cart
 }
 
+export async function cartNoteUpdate(
+  cartId: string,
+  note: string
+): Promise<Cart> {
+  const query = `
+    ${CART_FRAGMENT}
+    mutation cartNoteUpdate($cartId: ID!, $note: String!) {
+      cartNoteUpdate(cartId: $cartId, note: $note) {
+        cart { ...CartFields }
+        userErrors { field message }
+      }
+    }
+  `
+  const data = await storefront<{
+    cartNoteUpdate: { cart: Cart | null; userErrors: ShopifyUserError[] }
+  }>(query, { cartId, note })
+
+  assertNoUserErrors(data.cartNoteUpdate.userErrors)
+  if (!data.cartNoteUpdate.cart) throw new Error('Shopify did not return a cart')
+  return data.cartNoteUpdate.cart
+}
+
 export async function cartBuyerIdentityUpdate(
   cartId: string,
   buyerIdentity: BuyerIdentityInput
