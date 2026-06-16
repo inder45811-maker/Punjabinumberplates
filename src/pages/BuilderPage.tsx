@@ -10,16 +10,20 @@ import {
   Plus,
 } from 'lucide-react'
 import PlatePreview from '../components/PlatePreview'
-import { readableStyleFromProductTitle } from '../lib/catalog'
+import { productKindFor, readableStyleFromProductTitle } from '../lib/catalog'
+import { addonsForKind } from '../lib/addons'
 import {
   customLineAttributes,
   firstAvailableVariant,
   getProductByHandle,
+  getProductsByHandles,
   imageUrl,
   money,
   productImage,
   variantById,
   variantByOptions,
+  type Attribute,
+  type CartLineInput,
   type StorefrontProduct,
   type StorefrontVariant,
 } from '../lib/shopify'
@@ -28,18 +32,10 @@ import { useCart } from '../context/CartContext'
 
 type PlateType = 'Road Legal' | 'Show Plate'
 type PlateSide = 'front' | 'rear'
-type ProductKind = 'plate' | 'holder' | 'house-sign'
 
 function defaultPlateType(product: StorefrontProduct | null): PlateType {
   const title = product?.title.toLowerCase() ?? ''
   return title.includes('show') ? 'Show Plate' : 'Road Legal'
-}
-
-function productKindFor(product: StorefrontProduct | null): ProductKind {
-  const text = `${product?.title ?? ''} ${product?.productType ?? ''}`.toLowerCase()
-  if (/house[\s-]?(sign|plate)/.test(text)) return 'house-sign'
-  if (text.includes('holder') || text.includes('surround')) return 'holder'
-  return 'plate'
 }
 
 // Shopify products can carry their own front/rear option (e.g. "Amount of 2D
@@ -73,6 +69,8 @@ export default function BuilderPage() {
   const [backgroundColour, setBackgroundColour] = useState('')
   const [quantity, setQuantity] = useState(1)
   const [notes, setNotes] = useState('')
+  const [addonProducts, setAddonProducts] = useState<Map<string, StorefrontProduct>>(new Map())
+  const [selectedAddons, setSelectedAddons] = useState<Record<string, boolean>>({})
   const [isLoading, setIsLoading] = useState(Boolean(productHandle))
   const [isPreparingCheckout, setIsPreparingCheckout] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -139,6 +137,28 @@ export default function BuilderPage() {
     }
   }, [productHandle, variantParam])
 
+  // Resolve any optional paid extras (sticky pads, badges) for this product kind.
+  useEffect(() => {
+    if (!product) return
+    const addons = addonsForKind(productKindFor(product))
+    setSelectedAddons({})
+    if (!addons.length) {
+      setAddonProducts(new Map())
+      return
+    }
+    let cancelled = false
+    getProductsByHandles(addons.map((addon) => addon.handle))
+      .then((map) => {
+        if (!cancelled) setAddonProducts(map)
+      })
+      .catch(() => {
+        if (!cancelled) setAddonProducts(new Map())
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [product])
+
   const visibleOptions = useMemo(
     () => product?.options.filter((option) => option.name.toLowerCase() !== 'title') ?? [],
     [product]
@@ -147,6 +167,30 @@ export default function BuilderPage() {
   const productKind = productKindFor(product)
   const isHouseSign = productKind === 'house-sign'
   const showPlatePreview = productKind === 'plate'
+  const applicableAddons = useMemo(() => addonsForKind(productKind), [productKind])
+
+  const addonView = useMemo(
+    () =>
+      applicableAddons.map((addon) => {
+        const resolved = addonProducts.get(addon.handle) ?? null
+        const variant = resolved ? firstAvailableVariant(resolved) : null
+        const priceLabel = variant
+          ? money(variant.price)
+          : addon.fallbackPrice
+            ? money({ amount: addon.fallbackPrice, currencyCode: 'GBP' })
+            : null
+        return { addon, variant, priceLabel }
+      }),
+    [applicableAddons, addonProducts]
+  )
+
+  // Only offer an extra once it has a known price — either a real Shopify
+  // product or a configured fallback. This avoids ever showing an unpriced,
+  // uncharged extra (e.g. badges before their Shopify products are created).
+  const visibleAddons = useMemo(() => addonView.filter((entry) => entry.priceLabel), [addonView])
+
+  const toggleAddon = (key: string) =>
+    setSelectedAddons((prev) => ({ ...prev, [key]: !prev[key] }))
   const configOption = useMemo(
     () => visibleOptions.find((option) => isConfigurationOption(option)),
     [visibleOptions]
@@ -178,22 +222,45 @@ export default function BuilderPage() {
     checkoutRequestRef.current = true
     setIsPreparingCheckout(true)
     clearError()
+
+    // Resolve selected extras: real Shopify variants become their own paid
+    // cart lines; any not yet created in Shopify are recorded on the main line
+    // so the order still captures the request.
+    const addonLines: CartLineInput[] = []
+    const requestedExtras: string[] = []
+    addonView.forEach(({ addon, variant: addonVariant }) => {
+      if (!selectedAddons[addon.key]) return
+      if (addonVariant) {
+        addonLines.push({
+          merchandiseId: addonVariant.id,
+          quantity,
+          attributes: [{ key: '_for', value: registration.trim() || styleLabel }],
+        })
+      } else {
+        requestedExtras.push(addon.label)
+      }
+    })
+
+    const mainAttributes: Attribute[] = customLineAttributes({
+      registration: isHouseSign ? undefined : registration,
+      plateStyle: styleLabel,
+      plateType: isHouseSign ? undefined : plateType,
+      configuration: isHouseSign || configOption ? undefined : configuration,
+      signText: isHouseSign ? signText : undefined,
+      writingColour: isHouseSign ? writingColour : undefined,
+      backgroundColour: isHouseSign ? backgroundColour : undefined,
+      notes,
+      selectedOptions: variant.selectedOptions,
+    })
+    if (requestedExtras.length) {
+      mainAttributes.push({ key: '_requested_extras', value: requestedExtras.join(', ') })
+    }
+
     try {
-      await addToCart({
-        merchandiseId: variant.id,
-        quantity,
-        attributes: customLineAttributes({
-          registration: isHouseSign ? undefined : registration,
-          plateStyle: styleLabel,
-          plateType: isHouseSign ? undefined : plateType,
-          configuration: isHouseSign || configOption ? undefined : configuration,
-          signText: isHouseSign ? signText : undefined,
-          writingColour: isHouseSign ? writingColour : undefined,
-          backgroundColour: isHouseSign ? backgroundColour : undefined,
-          notes,
-          selectedOptions: variant.selectedOptions,
-        }),
-      })
+      await addToCart([
+        { merchandiseId: variant.id, quantity, attributes: mainAttributes },
+        ...addonLines,
+      ])
       closeCart()
       navigate('/checkout')
     } catch {
@@ -438,6 +505,35 @@ export default function BuilderPage() {
               )
             })}
 
+            {visibleAddons.length > 0 && (
+              <section className="builder-card" aria-labelledby="addons-heading">
+                <h2 id="addons-heading">Optional extras</h2>
+                <div className="addon-list">
+                  {visibleAddons.map(({ addon, priceLabel }) => {
+                    const checked = Boolean(selectedAddons[addon.key])
+                    return (
+                      <button
+                        type="button"
+                        key={addon.key}
+                        className={checked ? 'addon-row is-active' : 'addon-row'}
+                        onClick={() => toggleAddon(addon.key)}
+                        aria-pressed={checked}
+                      >
+                        <span className="addon-check" aria-hidden="true">
+                          {checked && <Check size={14} />}
+                        </span>
+                        <span className="addon-copy">
+                          <span className="addon-label">{addon.label}</span>
+                          <span className="addon-desc">{addon.description}</span>
+                        </span>
+                        {priceLabel && <span className="addon-price">+{priceLabel}</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
             <section className="builder-card" aria-labelledby="notes-heading">
               <h2 id="notes-heading">Order notes</h2>
               <textarea
@@ -447,6 +543,17 @@ export default function BuilderPage() {
                 placeholder="Add any fitting notes or special finish requests."
               />
             </section>
+
+            {productKind === 'plate' && (
+              <div className="builder-reminder" role="note">
+                <AlertCircle size={18} aria-hidden="true" />
+                <p>
+                  Want plate holders too?{' '}
+                  <Link to="/categories/plate-holders">Add them to your cart</Link> before you
+                  check out.
+                </p>
+              </div>
+            )}
 
             <section className="builder-card builder-summary" aria-labelledby="summary-heading">
               <h2 id="summary-heading">Checkout summary</h2>

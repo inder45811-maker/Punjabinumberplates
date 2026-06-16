@@ -88,6 +88,15 @@ export function isNumberPlateCategory(slug: string | undefined) {
   return slug === 'number-plates'
 }
 
+export type ProductKind = 'plate' | 'holder' | 'house-sign'
+
+export function productKindFor(product: { title?: string; productType?: string } | null): ProductKind {
+  const text = `${product?.title ?? ''} ${product?.productType ?? ''}`.toLowerCase()
+  if (/house[\s-]?(sign|plate)/.test(text)) return 'house-sign'
+  if (text.includes('holder') || text.includes('surround')) return 'holder'
+  return 'plate'
+}
+
 export function readableStyleFromProductTitle(title: string) {
   return title
     .replace(/\broad legal\b/gi, '')

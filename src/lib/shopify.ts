@@ -394,6 +394,28 @@ export async function getProductByHandle(
   return data.product
 }
 
+/**
+ * Resolves several products by handle in parallel, returning a handle→product
+ * map. Handles that do not resolve are simply absent from the map (a missing
+ * product never rejects the whole batch).
+ */
+export async function getProductsByHandles(
+  handles: string[]
+): Promise<Map<string, StorefrontProduct>> {
+  const map = new Map<string, StorefrontProduct>()
+  if (!handles.length) return map
+  const results = await Promise.all(
+    handles.map((handle) =>
+      getProductByHandle(handle).catch(() => null as StorefrontProduct | null)
+    )
+  )
+  handles.forEach((handle, index) => {
+    const product = results[index]
+    if (product) map.set(handle, product)
+  })
+  return map
+}
+
 export function money(value: MoneyV2 | undefined | null) {
   if (!value) return ''
   const amount = Number.parseFloat(value.amount)

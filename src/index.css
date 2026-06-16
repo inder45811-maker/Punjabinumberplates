@@ -1025,6 +1025,96 @@
   color: var(--gold);
 }
 
+.addon-list {
+  display: grid;
+  gap: 8px;
+}
+
+.addon-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--text);
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
+  width: 100%;
+}
+
+.addon-row.is-active {
+  border-color: var(--gold);
+  background: var(--gold-soft);
+}
+
+.addon-check {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  color: var(--bg, #050401);
+  background: #080808;
+}
+
+.addon-row.is-active .addon-check {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+
+.addon-copy {
+  display: grid;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+
+.addon-label {
+  font-weight: 800;
+}
+
+.addon-desc {
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.addon-price {
+  font-weight: 800;
+  color: var(--gold);
+  white-space: nowrap;
+}
+
+.builder-reminder {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--gold);
+  border-radius: var(--radius);
+  background: var(--gold-soft);
+}
+
+.builder-reminder svg {
+  color: var(--gold);
+  flex-shrink: 0;
+}
+
+.builder-reminder p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.builder-reminder a {
+  color: var(--gold);
+  font-weight: 800;
+  text-decoration: underline;
+}
+
 .builder-summary > div {
   display: flex;
   align-items: center;

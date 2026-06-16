@@ -21,7 +21,7 @@ interface CartContextValue {
   error: string | null
   openCart: () => void
   closeCart: () => void
-  addToCart: (item: CartItem) => Promise<void>
+  addToCart: (item: CartItem | CartItem[]) => Promise<void>
   removeLine: (lineId: string) => Promise<void>
   updateQuantity: (lineId: string, quantity: number) => Promise<void>
   clearError: () => void
@@ -96,19 +96,25 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const clearError = useCallback(() => setError(null), [])
 
   const addToCart = useCallback(
-    async (item: CartItem) => {
+    async (input: CartItem | CartItem[]) => {
+      const items = Array.isArray(input) ? input : [input]
+      if (items.length === 0) return
       setIsLoading(true)
       setError(null)
       try {
-        if (cart) {
+        if (!cart) {
+          persistCart(await createCart(items))
+        } else if (items.length === 1) {
+          // Single custom item: merge into an identical existing line if present.
+          const item = items[0]
           const existingLine = cart.lines.nodes.find((line) => lineMatchesItem(line, item))
           const updated = existingLine
             ? await updateCartLines(cart.id, [{ id: existingLine.id, quantity: item.quantity }])
             : await addCartLines(cart.id, [item])
           persistCart(updated)
         } else {
-          const created = await createCart([item])
-          persistCart(created)
+          // Main item plus add-ons: add all lines together in one request.
+          persistCart(await addCartLines(cart.id, items))
         }
         setIsOpen(true)
       } catch (err: unknown) {
