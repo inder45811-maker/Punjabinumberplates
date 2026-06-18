@@ -88,13 +88,24 @@ export function isNumberPlateCategory(slug: string | undefined) {
   return slug === 'number-plates'
 }
 
-export type ProductKind = 'plate' | 'holder' | 'house-sign'
+export type ProductKind = 'plate' | 'holder' | 'house-sign' | 'accessory'
 
 export function productKindFor(product: { title?: string; productType?: string } | null): ProductKind {
   const text = `${product?.title ?? ''} ${product?.productType ?? ''}`.toLowerCase()
   if (/house[\s-]?(sign|plate)/.test(text)) return 'house-sign'
-  if (text.includes('holder') || text.includes('surround')) return 'holder'
-  return 'plate'
+  // Accessories (badges, decals, stickers, keyrings, car hangings, fresheners,
+  // phone holders) never use plate registration / plate-use / configuration.
+  if (/\b(badges?|decals?|stickers?|key ?rings?|hangings?|fresheners?|symbols?|phones?)\b/.test(text)) {
+    return 'accessory'
+  }
+  // A plate + holder bundle still contains road-legal plates, so it needs a
+  // registration — keep it a plate even though "holder" appears in the title.
+  if (/\bplates?\b/.test(text) && /(\bbundle\b|\+)/.test(text)) return 'plate'
+  if (/\b(holders?|surrounds?)\b/.test(text)) return 'holder'
+  if (/\bplates?\b/.test(text)) return 'plate'
+  // Default to a simple accessory layout rather than wrongly showing plate
+  // options on an unrecognised product.
+  return 'accessory'
 }
 
 export function readableStyleFromProductTitle(title: string) {
