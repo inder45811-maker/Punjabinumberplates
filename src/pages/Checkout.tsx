@@ -310,6 +310,31 @@ function countryToShopifyCode(country: string) {
   return country.toLowerCase() === 'united kingdom' ? 'GB' : undefined
 }
 
+/**
+ * Shopify's buyer identity requires phone numbers in E.164 form (e.g.
+ * +447123456789). A normal UK entry like "07123 456789" is rejected, which
+ * would fail the whole buyer-identity update (losing email + country pre-fill
+ * too). Normalize what we can; return undefined when we can't, so the update
+ * still succeeds with email + country.
+ */
+function toE164Phone(rawPhone: string, country: string): string | undefined {
+  const cleaned = rawPhone.replace(/[^\d+]/g, '')
+  if (!cleaned) return undefined
+  if (cleaned.startsWith('+')) {
+    const digits = cleaned.slice(1).replace(/\D/g, '')
+    return digits.length >= 8 ? `+${digits}` : undefined
+  }
+  if (cleaned.startsWith('00')) {
+    const digits = cleaned.slice(2)
+    return digits.length >= 8 ? `+${digits}` : undefined
+  }
+  const isUK = country.trim().toLowerCase() === 'united kingdom'
+  if (isUK && cleaned.startsWith('0') && cleaned.length >= 10) {
+    return `+44${cleaned.slice(1)}`
+  }
+  return undefined
+}
+
 export default function Checkout() {
   const {
     cart,
@@ -442,7 +467,7 @@ export default function Checkout() {
       try {
         updatedCart = await cartBuyerIdentityUpdate(cart.id, {
           email: customer.email.trim(),
-          phone: customer.phone.trim(),
+          phone: toE164Phone(customer.phone, customer.country),
           countryCode: countryToShopifyCode(customer.country),
         })
       } catch (err) {
