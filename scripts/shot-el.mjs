@@ -8,7 +8,7 @@ const URL = process.argv[2]; const SELECTOR = process.argv[3]; const OUT = proce
 const proc = spawn(SHELL, ['--headless','--enable-unsafe-swiftshader','--hide-scrollbars','--no-first-run','--no-sandbox',`--remote-debugging-port=${PORT}`,'--window-size=1600,1200','--force-device-scale-factor=2',URL],{stdio:'ignore'})
 function cleanup(c){try{ws?.close()}catch{}try{proc.kill()}catch{}process.exit(c)}
 let wsUrl
-for (let i=0;i<60;i++){try{const r=await fetch(`http://localhost:${PORT}/json`);const l=await r.json();const p=l.find(t=>t.type==='page'&&t.url.includes('localhost'));wsUrl=p?.webSocketDebuggerUrl;if(wsUrl)break}catch{}await sleep(200)}
+for (let i=0;i<60;i++){try{const r=await fetch(`http://localhost:${PORT}/json`);const l=await r.json();const p=l.find(t=>t.type==='page');wsUrl=p?.webSocketDebuggerUrl;if(wsUrl)break}catch{}await sleep(200)}
 const ws=new WebSocket(wsUrl);let id=0;const pending=new Map()
 ws.addEventListener('message',e=>{const m=JSON.parse(e.data);if(m.id&&pending.has(m.id)){pending.get(m.id)(m.result);pending.delete(m.id)}})
 const send=(method,params={})=>new Promise(res=>{const i=++id;pending.set(i,res);ws.send(JSON.stringify({id:i,method,params}))})

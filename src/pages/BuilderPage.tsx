@@ -166,6 +166,7 @@ export default function BuilderPage() {
 
   const productKind = productKindFor(product)
   const isHouseSign = productKind === 'house-sign'
+  const isPlate = productKind === 'plate'
   const showPlatePreview = productKind === 'plate'
   const applicableAddons = useMemo(() => addonsForKind(productKind), [productKind])
 
@@ -207,7 +208,11 @@ export default function BuilderPage() {
   const currentPrice = variant ? money(variant.price) : 'Unavailable'
   const productPreviewImage = product ? productImage(product, variant) : null
   const checkoutBusy = cartLoading || isPreparingCheckout
-  const requiredTextMissing = isHouseSign ? !signText.trim() : !registration.trim()
+  const requiredTextMissing = isHouseSign
+    ? !signText.trim()
+    : isPlate
+      ? !registration.trim()
+      : false
 
   const updateOption = (name: string, value: string) => {
     if (!product) return
@@ -242,10 +247,10 @@ export default function BuilderPage() {
     })
 
     const mainAttributes: Attribute[] = customLineAttributes({
-      registration: isHouseSign ? undefined : registration,
+      registration: isPlate ? registration : undefined,
       plateStyle: styleLabel,
-      plateType: isHouseSign ? undefined : plateType,
-      configuration: isHouseSign || configOption ? undefined : configuration,
+      plateType: isPlate ? plateType : undefined,
+      configuration: isPlate && !configOption ? configuration : undefined,
       signText: isHouseSign ? signText : undefined,
       writingColour: isHouseSign ? writingColour : undefined,
       backgroundColour: isHouseSign ? backgroundColour : undefined,
@@ -369,7 +374,7 @@ export default function BuilderPage() {
               </div>
             )}
 
-            {isHouseSign ? (
+            {isHouseSign && (
               <>
                 <section className="builder-card" aria-labelledby="sign-text-heading">
                   <h2 id="sign-text-heading">Name &amp; address for your sign</h2>
@@ -423,7 +428,9 @@ export default function BuilderPage() {
                   </section>
                 )}
               </>
-            ) : (
+            )}
+
+            {isPlate && (
               <section className="builder-card" aria-labelledby="registration-heading">
                 <h2 id="registration-heading">Registration text</h2>
                 <label className="field-label" htmlFor="registration">
@@ -441,7 +448,7 @@ export default function BuilderPage() {
               </section>
             )}
 
-            {!isHouseSign && (
+            {isPlate && (
               <section className="builder-card" aria-labelledby="plate-type-heading">
                 <h2 id="plate-type-heading">Plate use</h2>
                 <div className="segmented-control">
