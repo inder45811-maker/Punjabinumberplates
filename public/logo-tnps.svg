@@ -1,36 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" role="img" aria-label="The Number Plate Shop logo">
-  <circle cx="120" cy="120" r="118" fill="#0a0a0a" />
+  <circle cx="120" cy="120" r="119" fill="#0a0a0a" />
   <circle cx="120" cy="120" r="106" fill="none" stroke="#ffffff" stroke-width="5" />
-  <rect x="26" y="96" width="138" height="40" rx="6" fill="#ffd500" stroke="#ffffff" stroke-width="3" />
+
+  <!-- Centre lockup: yellow plate "THE NUMBER PLATE" + white "SHOP" -->
+  <rect x="30" y="103" width="112" height="34" rx="5" fill="#ffd400" stroke="#ffffff" stroke-width="2.5" />
   <text
-    x="95"
-    y="123"
+    x="86"
+    y="125"
     text-anchor="middle"
     font-family="Arial, Helvetica, sans-serif"
     font-weight="900"
-    font-size="17"
-    fill="#000000"
-    textLength="124"
+    font-size="13"
+    fill="#0a0a0a"
+    textLength="100"
     lengthAdjust="spacingAndGlyphs"
   >THE NUMBER PLATE</text>
   <text
-    x="170"
-    y="127"
+    x="148"
+    y="126"
     text-anchor="start"
     font-family="Arial, Helvetica, sans-serif"
     font-weight="900"
-    font-size="27"
+    font-size="22"
     fill="#ffffff"
   >SHOP</text>
-  <line x1="40" y1="152" x2="200" y2="152" stroke="#ffffff" stroke-width="1.5" />
+
+  <line x1="50" y1="150" x2="190" y2="150" stroke="#ffffff" stroke-width="1.5" />
   <text
     x="120"
     y="167"
     text-anchor="middle"
     font-family="Arial, Helvetica, sans-serif"
     font-weight="700"
-    font-size="9.5"
-    letter-spacing="2.5"
+    font-size="9"
+    letter-spacing="1.5"
     fill="#ffffff"
+    textLength="158"
+    lengthAdjust="spacingAndGlyphs"
   >NUMBER PLATE SPECIALISTS</text>
 </svg>
