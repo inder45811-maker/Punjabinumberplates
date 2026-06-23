@@ -896,13 +896,13 @@
 .holder-preview__name-rail {
   position: absolute;
   left: 50%;
-  top: 80.5%;
+  top: 76.6%;
   z-index: 2;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(44%, 350px);
-  height: clamp(26px, 6.4vw, 50px);
+  width: min(35%, 280px);
+  height: clamp(18px, 4.8vw, 36px);
   transform: translate(-50%, -50%);
 }
 
@@ -912,18 +912,18 @@
   color: #efc45a;
   font-family: 'Arial Black', Arial, system-ui, sans-serif;
   font-weight: 900;
-  line-height: 1;
+  line-height: 0.92;
   letter-spacing: 0;
   overflow: hidden;
   text-align: center;
   text-transform: uppercase;
   white-space: nowrap;
-  -webkit-text-stroke: 0.35px rgba(78, 47, 0, 0.65);
+  -webkit-text-stroke: 0.25px rgba(78, 47, 0, 0.65);
   text-shadow:
     0 1px 0 #fff3ac,
-    0 2px 0 #8a5d08,
-    1px 3px 0 #4b3000,
-    0 7px 10px rgba(0, 0, 0, 0.7);
+    0 1.5px 0 #8a5d08,
+    1px 2.5px 0 #4b3000,
+    0 5px 8px rgba(0, 0, 0, 0.68);
 }
 
 .holder-preview figcaption {
