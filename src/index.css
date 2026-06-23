@@ -901,26 +901,29 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: min(36%, 290px);
-  height: clamp(22px, 5.6vw, 42px);
+  width: min(44%, 350px);
+  height: clamp(26px, 6.4vw, 50px);
   transform: translate(-50%, -50%);
 }
 
 .holder-preview__name {
   flex: 1;
   min-width: 0;
-  color: #d6a933;
-  font-family: Impact, 'Arial Black', system-ui, sans-serif;
+  color: #efc45a;
+  font-family: 'Arial Black', Arial, system-ui, sans-serif;
   font-weight: 900;
   line-height: 1;
+  letter-spacing: 0;
   overflow: hidden;
   text-align: center;
   text-transform: uppercase;
   white-space: nowrap;
+  -webkit-text-stroke: 0.35px rgba(78, 47, 0, 0.65);
   text-shadow:
-    0 1px 0 #fff0a8,
-    1px 2px 0 #6f4b07,
-    0 6px 12px rgba(0, 0, 0, 0.65);
+    0 1px 0 #fff3ac,
+    0 2px 0 #8a5d08,
+    1px 3px 0 #4b3000,
+    0 7px 10px rgba(0, 0, 0, 0.7);
 }
 
 .holder-preview figcaption {
