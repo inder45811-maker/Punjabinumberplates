@@ -901,8 +901,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: clamp(3px, 0.9vw, 8px);
-  width: min(38%, 305px);
+  width: min(36%, 290px);
   height: clamp(22px, 5.6vw, 42px);
   transform: translate(-50%, -50%);
 }
@@ -911,43 +910,17 @@
   flex: 1;
   min-width: 0;
   color: #d6a933;
-  font-family: 'Charles Wright', Impact, 'Arial Black', sans-serif;
+  font-family: Impact, 'Arial Black', system-ui, sans-serif;
   font-weight: 900;
   line-height: 1;
   overflow: hidden;
   text-align: center;
-  text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
   text-shadow:
     0 1px 0 #fff0a8,
     1px 2px 0 #6f4b07,
     0 6px 12px rgba(0, 0, 0, 0.65);
-}
-
-.holder-preview__emblem {
-  position: relative;
-  flex: 0 0 clamp(13px, 3.4vw, 23px);
-  width: clamp(13px, 3.4vw, 23px);
-  height: clamp(13px, 3.4vw, 23px);
-  color: #d6a933;
-}
-
-.holder-preview__emblem::before {
-  content: '\262C';
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: clamp(16px, 4.2vw, 28px);
-  font-weight: 900;
-  line-height: 1;
-  color: #d6a933;
-  text-shadow:
-    0 1px 0 #fff0a8,
-    1px 2px 0 #6f4b07,
-    0 5px 9px rgba(0, 0, 0, 0.52);
-  transform: translate(-50%, -50%);
 }
 
 .holder-preview figcaption {

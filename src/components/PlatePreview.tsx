@@ -48,10 +48,10 @@ function cleanHolderText(value: string) {
 
 function holderFontSizeFor(value: string) {
   const count = value.replace(/\s/g, '').length
-  if (count <= 7) return 34
-  if (count <= 10) return 30
-  if (count <= 14) return 25
-  return 21
+  if (count <= 7) return 30
+  if (count <= 10) return 24
+  if (count <= 14) return 20
+  return 17
 }
 
 function PlateFace({
@@ -142,14 +142,12 @@ export function PlateHolderPreview({
           decorative
         />
         <div className="holder-preview__name-rail" aria-hidden="true">
-          <span className="holder-preview__emblem" />
           <span
             className="holder-preview__name"
-            style={{ fontSize: `clamp(0.78rem, ${fontSize / 7.4}vw, ${fontSize}px)` }}
+            style={{ fontSize: `clamp(0.72rem, ${fontSize / 7.4}vw, ${fontSize}px)` }}
           >
             {text}
           </span>
-          <span className="holder-preview__emblem" />
         </div>
       </div>
       <figcaption>
