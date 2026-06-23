@@ -11,9 +11,9 @@ interface PlateFaceProps extends PlatePreviewProps {
 
 interface PlateHolderPreviewProps {
   holderText: string
-  registration?: string
+  imageAlt?: string
+  imageSrc?: string
   styleLabel?: string
-  side?: PlateSide
 }
 
 type PlateSide = 'front' | 'rear'
@@ -114,31 +114,28 @@ export default function PlatePreview({
 
 export function PlateHolderPreview({
   holderText,
-  registration = 'YOUR REG',
+  imageAlt = 'Luxury plate holder preview',
+  imageSrc = '/plate-holders/bhandal-holders.jpg',
   styleLabel = 'Luxury plate holder',
-  side = 'rear',
 }: PlateHolderPreviewProps) {
   const text = cleanHolderText(holderText)
   const fontSize = holderFontSizeFor(text)
+  const hasCustomText = holderText.trim().length > 0
 
   return (
     <figure className="holder-preview" aria-label={`${styleLabel} live holder preview`}>
       <div
-        className="holder-preview__stage"
+        className="holder-preview__photo-stage"
         role="img"
-        aria-label={`${styleLabel} preview with ${text} holder text`}
+        aria-label={
+          hasCustomText
+            ? `${styleLabel} preview with ${text} holder text`
+            : `${styleLabel} product preview`
+        }
       >
-        <div className="holder-preview__frame">
-          <div className="holder-preview__plate-slot">
-            <PlateFace
-              registration={registration}
-              styleLabel={styleLabel}
-              side={side}
-              className="holder-preview__plate"
-              decorative
-            />
-          </div>
-          <div className="holder-preview__name-rail" aria-hidden="true">
+        <img className="holder-preview__photo" src={imageSrc} alt={imageAlt} />
+        {hasCustomText && (
+          <div className="holder-preview__photo-rail" aria-hidden="true">
             <span className="holder-preview__emblem" />
             <span
               className="holder-preview__name"
@@ -148,7 +145,7 @@ export function PlateHolderPreview({
             </span>
             <span className="holder-preview__emblem" />
           </div>
-        </div>
+        )}
       </div>
       <figcaption>
         <span>{styleLabel}</span>
