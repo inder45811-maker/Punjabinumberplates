@@ -372,7 +372,7 @@ function ContactHero() {
     <section
       style={{
         backgroundColor: TOKENS.bgVoid,
-        padding: '120px 0 80px',
+        padding: '64px 0 40px',
       }}
     >
       <Container>
@@ -420,6 +420,9 @@ function ContactFormAndStore() {
 
   useGSAP(() => {
     if (!sectionRef.current) return
+    // This is the page's primary content directly under the hero, so reveal it
+    // on mount rather than gating on scroll — otherwise it sits invisible
+    // (opacity 0) just below the fold until the user scrolls.
     if (leftRef.current) {
       const fields = leftRef.current.querySelectorAll('.form-field')
       gsap.fromTo(
@@ -431,7 +434,7 @@ function ContactFormAndStore() {
           duration: 0.8,
           stagger: 0.08,
           ease: 'expo.out',
-          scrollTrigger: { trigger: sectionRef.current, start: 'top 60%' },
+          delay: 0.15,
         }
       )
     }
@@ -444,8 +447,7 @@ function ContactFormAndStore() {
           x: 0,
           duration: 1.0,
           ease: 'expo.out',
-          delay: 0.2,
-          scrollTrigger: { trigger: sectionRef.current, start: 'top 60%' },
+          delay: 0.25,
         }
       )
     }
@@ -621,7 +623,6 @@ function ContactFormAndStore() {
           ref={rightRef as React.RefObject<HTMLDivElement>}
           style={{
             padding: '32px',
-            opacity: 0,
           }}
         >
           {/* Visit Us */}
