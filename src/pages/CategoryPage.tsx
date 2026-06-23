@@ -72,13 +72,8 @@ export default function CategoryPage() {
         </div>
       </section>
 
-      <section className="products-section" aria-labelledby="products-heading">
+      <section className="products-section" aria-label={`${category.label} products`}>
         <div className="section-shell">
-          <div className="section-heading">
-            <p>Live Shopify catalogue</p>
-            <h2 id="products-heading">{category.label}</h2>
-          </div>
-
           {isLoading && (
             <div className="catalog-state">
               <Loader2 className="spin" size={26} aria-hidden="true" />
