@@ -354,18 +354,9 @@ export default function BuilderPage() {
               </>
             )}
             {showHolderPreview && (
-              <PlateHolderPreview
-                holderText={holderText}
-                imageAlt={productPreviewImage ? productAlt(product, variant?.title) : undefined}
-                imageSrc={
-                  productPreviewImage
-                    ? imageUrl(productPreviewImage, { width: 1100 })
-                    : undefined
-                }
-                styleLabel={styleLabel}
-              />
+              <PlateHolderPreview holderText={holderText} styleLabel={styleLabel} />
             )}
-            {productPreviewImage && !showHolderPreview && (
+            {productPreviewImage && (
               <img
                 className="builder-product-image"
                 src={imageUrl(productPreviewImage, { width: 900 })}

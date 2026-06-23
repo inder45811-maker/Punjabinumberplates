@@ -11,9 +11,9 @@ interface PlateFaceProps extends PlatePreviewProps {
 
 interface PlateHolderPreviewProps {
   holderText: string
-  imageAlt?: string
-  imageSrc?: string
+  registration?: string
   styleLabel?: string
+  side?: PlateSide
 }
 
 type PlateSide = 'front' | 'rear'
@@ -114,28 +114,30 @@ export default function PlatePreview({
 
 export function PlateHolderPreview({
   holderText,
-  imageAlt = 'Luxury plate holder preview',
-  imageSrc = '/plate-holders/bhandal-holders.jpg',
+  registration = 'YOUR REG',
   styleLabel = 'Luxury plate holder',
+  side = 'rear',
 }: PlateHolderPreviewProps) {
   const text = cleanHolderText(holderText)
   const fontSize = holderFontSizeFor(text)
-  const hasCustomText = holderText.trim().length > 0
 
   return (
     <figure className="holder-preview" aria-label={`${styleLabel} live holder preview`}>
       <div
-        className="holder-preview__photo-stage"
+        className="holder-preview__assembly"
         role="img"
-        aria-label={
-          hasCustomText
-            ? `${styleLabel} preview with ${text} holder text`
-            : `${styleLabel} product preview`
-        }
+        aria-label={`${styleLabel} preview with ${text} holder text`}
       >
-        <img className="holder-preview__photo" src={imageSrc} alt={imageAlt} />
-        {hasCustomText && (
-          <div className="holder-preview__photo-rail" aria-hidden="true">
+        <div className="holder-preview__backing" aria-hidden="true" />
+        <PlateFace
+          registration={registration}
+          styleLabel={styleLabel}
+          side={side}
+          className="holder-preview__plate"
+          decorative
+        />
+        <div className="holder-preview__spine" aria-hidden="true">
+          <div className="holder-preview__name-rail">
             <span className="holder-preview__emblem" />
             <span
               className="holder-preview__name"
@@ -145,7 +147,7 @@ export function PlateHolderPreview({
             </span>
             <span className="holder-preview__emblem" />
           </div>
-        )}
+        </div>
       </div>
       <figcaption>
         <span>{styleLabel}</span>
