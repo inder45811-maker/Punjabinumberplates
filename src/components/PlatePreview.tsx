@@ -48,10 +48,10 @@ function cleanHolderText(value: string) {
 
 function holderFontSizeFor(value: string) {
   const count = value.replace(/\s/g, '').length
-  if (count <= 7) return 38
-  if (count <= 10) return 32
-  if (count <= 14) return 27
-  return 23
+  if (count <= 7) return 34
+  if (count <= 10) return 30
+  if (count <= 14) return 25
+  return 21
 }
 
 function PlateFace({

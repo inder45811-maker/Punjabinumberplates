@@ -61,6 +61,7 @@ export default function BuilderPage() {
   const [variant, setVariant] = useState<StorefrontVariant | null>(null)
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
   const [registration, setRegistration] = useState('')
+  const [holderRegistration, setHolderRegistration] = useState('')
   const [holderText, setHolderText] = useState('')
   const [plateType, setPlateType] = useState<PlateType>('Road Legal')
   const [plateSide, setPlateSide] = useState<PlateSide>('rear')
@@ -216,7 +217,7 @@ export default function BuilderPage() {
     : isPlate
       ? !registration.trim()
       : isHolder
-        ? !holderText.trim()
+        ? !holderRegistration.trim() || !holderText.trim()
         : false
 
   const updateOption = (name: string, value: string) => {
@@ -244,7 +245,12 @@ export default function BuilderPage() {
         addonLines.push({
           merchandiseId: addonVariant.id,
           quantity,
-          attributes: [{ key: '_for', value: registration.trim() || holderText.trim() || styleLabel }],
+          attributes: [
+            {
+              key: '_for',
+              value: registration.trim() || holderRegistration.trim() || holderText.trim() || styleLabel,
+            },
+          ],
         })
       } else {
         requestedExtras.push(addon.label)
@@ -252,7 +258,7 @@ export default function BuilderPage() {
     })
 
     const mainAttributes: Attribute[] = customLineAttributes({
-      registration: isPlate ? registration : undefined,
+      registration: isPlate ? registration : isHolder ? holderRegistration : undefined,
       plateStyle: styleLabel,
       plateType: isPlate ? plateType : undefined,
       configuration: isPlate && !configOption ? configuration : undefined,
@@ -354,9 +360,13 @@ export default function BuilderPage() {
               </>
             )}
             {showHolderPreview && (
-              <PlateHolderPreview holderText={holderText} styleLabel={styleLabel} />
+              <PlateHolderPreview
+                holderText={holderText}
+                registration={holderRegistration}
+                styleLabel={styleLabel}
+              />
             )}
-            {productPreviewImage && !showHolderPreview && (
+            {productPreviewImage && (
               <img
                 className="builder-product-image"
                 src={imageUrl(productPreviewImage, { width: 900 })}
@@ -450,6 +460,24 @@ export default function BuilderPage() {
                   className="builder-input"
                   value={registration}
                   onChange={(event) => setRegistration(event.target.value)}
+                  maxLength={12}
+                  placeholder="X24 GUR"
+                  autoComplete="off"
+                />
+              </section>
+            )}
+
+            {isHolder && (
+              <section className="builder-card" aria-labelledby="holder-registration-heading">
+                <h2 id="holder-registration-heading">Plate registration</h2>
+                <label className="field-label" htmlFor="holder-registration">
+                  Enter the registration shown in the holder preview
+                </label>
+                <input
+                  id="holder-registration"
+                  className="builder-input"
+                  value={holderRegistration}
+                  onChange={(event) => setHolderRegistration(event.target.value)}
                   maxLength={12}
                   placeholder="X24 GUR"
                   autoComplete="off"
