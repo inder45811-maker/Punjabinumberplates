@@ -38,10 +38,6 @@ export default function PlatePreview({
         role="img"
         aria-label={`${isRear ? 'Rear' : 'Front'} ${styleLabel} preview for ${text}`}
       >
-        <div className="plate-preview__badge" aria-hidden="true">
-          <span>GB</span>
-        </div>
-        <div className="plate-preview__divider" aria-hidden="true" />
         <div className="plate-preview__text-wrap">
           <span
             className="plate-preview__text"
