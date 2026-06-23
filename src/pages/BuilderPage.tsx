@@ -356,7 +356,7 @@ export default function BuilderPage() {
             {showHolderPreview && (
               <PlateHolderPreview holderText={holderText} styleLabel={styleLabel} />
             )}
-            {productPreviewImage && (
+            {productPreviewImage && !showHolderPreview && (
               <img
                 className="builder-product-image"
                 src={imageUrl(productPreviewImage, { width: 900 })}

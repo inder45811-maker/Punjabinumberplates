@@ -128,7 +128,12 @@ export function PlateHolderPreview({
         role="img"
         aria-label={`${styleLabel} preview with ${text} holder text`}
       >
-        <div className="holder-preview__backing" aria-hidden="true" />
+        <img
+          className="holder-preview__base"
+          src="/plate-holders/luxury-holder-preview-base.png"
+          alt=""
+          aria-hidden="true"
+        />
         <PlateFace
           registration={registration}
           styleLabel={styleLabel}
@@ -136,17 +141,15 @@ export function PlateHolderPreview({
           className="holder-preview__plate"
           decorative
         />
-        <div className="holder-preview__spine" aria-hidden="true">
-          <div className="holder-preview__name-rail">
-            <span className="holder-preview__emblem" />
-            <span
-              className="holder-preview__name"
-              style={{ fontSize: `clamp(0.78rem, ${fontSize / 7.4}vw, ${fontSize}px)` }}
-            >
-              {text}
-            </span>
-            <span className="holder-preview__emblem" />
-          </div>
+        <div className="holder-preview__name-rail" aria-hidden="true">
+          <span className="holder-preview__emblem" />
+          <span
+            className="holder-preview__name"
+            style={{ fontSize: `clamp(0.78rem, ${fontSize / 7.4}vw, ${fontSize}px)` }}
+          >
+            {text}
+          </span>
+          <span className="holder-preview__emblem" />
         </div>
       </div>
       <figcaption>
