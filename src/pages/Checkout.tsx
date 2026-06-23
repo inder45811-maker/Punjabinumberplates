@@ -133,6 +133,7 @@ const REVIEW_ATTRIBUTE_ORDER = [
   '_plate_type',
   '_plate_style',
   '_configuration',
+  '_holder_text',
   '_sign_text',
   '_writing_colour',
   '_background_colour',

@@ -9,7 +9,7 @@ import {
   Minus,
   Plus,
 } from 'lucide-react'
-import PlatePreview from '../components/PlatePreview'
+import PlatePreview, { PlateHolderPreview } from '../components/PlatePreview'
 import { productKindFor, readableStyleFromProductTitle } from '../lib/catalog'
 import { addonsForKind } from '../lib/addons'
 import {
@@ -61,6 +61,7 @@ export default function BuilderPage() {
   const [variant, setVariant] = useState<StorefrontVariant | null>(null)
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
   const [registration, setRegistration] = useState('')
+  const [holderText, setHolderText] = useState('')
   const [plateType, setPlateType] = useState<PlateType>('Road Legal')
   const [plateSide, setPlateSide] = useState<PlateSide>('rear')
   const [configuration, setConfiguration] = useState('Front and Rear')
@@ -167,7 +168,9 @@ export default function BuilderPage() {
   const productKind = productKindFor(product)
   const isHouseSign = productKind === 'house-sign'
   const isPlate = productKind === 'plate'
+  const isHolder = productKind === 'holder'
   const showPlatePreview = productKind === 'plate'
+  const showHolderPreview = productKind === 'holder'
   const applicableAddons = useMemo(() => addonsForKind(productKind), [productKind])
 
   const addonView = useMemo(
@@ -212,7 +215,9 @@ export default function BuilderPage() {
     ? !signText.trim()
     : isPlate
       ? !registration.trim()
-      : false
+      : isHolder
+        ? !holderText.trim()
+        : false
 
   const updateOption = (name: string, value: string) => {
     if (!product) return
@@ -239,7 +244,7 @@ export default function BuilderPage() {
         addonLines.push({
           merchandiseId: addonVariant.id,
           quantity,
-          attributes: [{ key: '_for', value: registration.trim() || styleLabel }],
+          attributes: [{ key: '_for', value: registration.trim() || holderText.trim() || styleLabel }],
         })
       } else {
         requestedExtras.push(addon.label)
@@ -251,6 +256,7 @@ export default function BuilderPage() {
       plateStyle: styleLabel,
       plateType: isPlate ? plateType : undefined,
       configuration: isPlate && !configOption ? configuration : undefined,
+      holderText: isHolder ? holderText : undefined,
       signText: isHouseSign ? signText : undefined,
       writingColour: isHouseSign ? writingColour : undefined,
       backgroundColour: isHouseSign ? backgroundColour : undefined,
@@ -347,6 +353,9 @@ export default function BuilderPage() {
                 </div>
               </>
             )}
+            {showHolderPreview && (
+              <PlateHolderPreview holderText={holderText} styleLabel={styleLabel} />
+            )}
             {productPreviewImage && (
               <img
                 className="builder-product-image"
@@ -354,7 +363,7 @@ export default function BuilderPage() {
                 alt={productAlt(product, variant?.title)}
                 width={productPreviewImage.width ?? 900}
                 height={productPreviewImage.height ?? 675}
-                loading={showPlatePreview ? 'lazy' : 'eager'}
+                loading={showPlatePreview || showHolderPreview ? 'lazy' : 'eager'}
                 decoding="async"
               />
             )}
@@ -443,6 +452,24 @@ export default function BuilderPage() {
                   onChange={(event) => setRegistration(event.target.value)}
                   maxLength={12}
                   placeholder="X24 GUR"
+                  autoComplete="off"
+                />
+              </section>
+            )}
+
+            {isHolder && (
+              <section className="builder-card" aria-labelledby="holder-text-heading">
+                <h2 id="holder-text-heading">Holder text</h2>
+                <label className="field-label" htmlFor="holder-text">
+                  Enter the name or wording for the 3D gel holder
+                </label>
+                <input
+                  id="holder-text"
+                  className="builder-input"
+                  value={holderText}
+                  onChange={(event) => setHolderText(event.target.value)}
+                  maxLength={18}
+                  placeholder="BHANDAL"
                   autoComplete="off"
                 />
               </section>

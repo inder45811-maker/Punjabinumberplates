@@ -477,6 +477,7 @@ export function customLineAttributes(input: {
   plateStyle?: string
   plateType?: string
   configuration?: string
+  holderText?: string
   signText?: string
   writingColour?: string
   backgroundColour?: string
@@ -485,6 +486,7 @@ export function customLineAttributes(input: {
 }) {
   const attrs: Attribute[] = []
   const registration = input.registration?.trim().toUpperCase()
+  const holderText = input.holderText?.trim().toUpperCase()
   const signText = input.signText?.trim()
   const writingColour = input.writingColour?.trim()
   const backgroundColour = input.backgroundColour?.trim()
@@ -494,6 +496,7 @@ export function customLineAttributes(input: {
   if (input.plateStyle) attrs.push({ key: '_plate_style', value: input.plateStyle })
   if (input.plateType) attrs.push({ key: '_plate_type', value: input.plateType })
   if (input.configuration) attrs.push({ key: '_configuration', value: input.configuration })
+  if (holderText) attrs.push({ key: '_holder_text', value: holderText })
   if (signText) attrs.push({ key: '_sign_text', value: signText })
   if (writingColour) attrs.push({ key: '_writing_colour', value: writingColour })
   if (backgroundColour) attrs.push({ key: '_background_colour', value: backgroundColour })
