@@ -170,8 +170,11 @@ export default function BuilderPage() {
   const isHouseSign = productKind === 'house-sign'
   const isPlate = productKind === 'plate'
   const isHolder = productKind === 'holder'
+  const productSearchText = `${product?.title ?? ''} ${product?.productType ?? ''}`
+  const isLuxuryHolder = isHolder && /\blux(?:u|e)ry\b/i.test(productSearchText)
   const showPlatePreview = productKind === 'plate'
-  const showHolderPreview = productKind === 'holder'
+  const showLuxuryHolderPreview = isLuxuryHolder
+  const showStandardHolderPreview = isHolder && !isLuxuryHolder
   const applicableAddons = useMemo(() => addonsForKind(productKind), [productKind])
 
   const addonView = useMemo(
@@ -217,7 +220,7 @@ export default function BuilderPage() {
     : isPlate
       ? !registration.trim()
       : isHolder
-        ? !holderRegistration.trim() || !holderText.trim()
+        ? !holderRegistration.trim() || (isLuxuryHolder && !holderText.trim())
         : false
 
   const updateOption = (name: string, value: string) => {
@@ -262,7 +265,7 @@ export default function BuilderPage() {
       plateStyle: styleLabel,
       plateType: isPlate ? plateType : undefined,
       configuration: isPlate && !configOption ? configuration : undefined,
-      holderText: isHolder ? holderText : undefined,
+      holderText: isLuxuryHolder ? holderText : undefined,
       signText: isHouseSign ? signText : undefined,
       writingColour: isHouseSign ? writingColour : undefined,
       backgroundColour: isHouseSign ? backgroundColour : undefined,
@@ -359,12 +362,15 @@ export default function BuilderPage() {
                 </div>
               </>
             )}
-            {showHolderPreview && (
+            {showLuxuryHolderPreview && (
               <PlateHolderPreview
                 holderText={holderText}
                 registration={holderRegistration}
                 styleLabel={styleLabel}
               />
+            )}
+            {showStandardHolderPreview && (
+              <PlatePreview registration={holderRegistration} styleLabel={styleLabel} side="rear" />
             )}
             {productPreviewImage && (
               <img
@@ -373,7 +379,7 @@ export default function BuilderPage() {
                 alt={productAlt(product, variant?.title)}
                 width={productPreviewImage.width ?? 900}
                 height={productPreviewImage.height ?? 675}
-                loading={showPlatePreview || showHolderPreview ? 'lazy' : 'eager'}
+                loading={showPlatePreview || isHolder ? 'lazy' : 'eager'}
                 decoding="async"
               />
             )}
@@ -485,7 +491,7 @@ export default function BuilderPage() {
               </section>
             )}
 
-            {isHolder && (
+            {isLuxuryHolder && (
               <section className="builder-card" aria-labelledby="holder-text-heading">
                 <h2 id="holder-text-heading">Holder text</h2>
                 <label className="field-label" htmlFor="holder-text">
