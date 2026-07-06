@@ -171,9 +171,15 @@ export default function BuilderPage() {
   const isPlate = productKind === 'plate'
   const isHolder = productKind === 'holder'
   const productSearchText = `${product?.title ?? ''} ${product?.productType ?? ''}`
-  const isLuxuryHolder = isHolder && /\blux(?:u|e)ry\b/i.test(productSearchText)
-  const showPlatePreview = productKind === 'plate'
-  const showLuxuryHolderPreview = isLuxuryHolder
+  const mentionsLuxuryHolder =
+    /\blux(?:u|e)ry\b/i.test(productSearchText) && /\b(holders?|surrounds?)\b/i.test(productSearchText)
+  const isLuxuryHolder = isHolder && mentionsLuxuryHolder
+  // Plate + luxury holder bundles stay plates for the form fields, but the
+  // preview and holder text follow the luxury holder they include.
+  const isLuxuryHolderBundle = isPlate && mentionsLuxuryHolder
+  const hasLuxuryHolder = isLuxuryHolder || isLuxuryHolderBundle
+  const showPlatePreview = isPlate && !isLuxuryHolderBundle
+  const showLuxuryHolderPreview = hasLuxuryHolder
   const showStandardHolderPreview = isHolder && !isLuxuryHolder
   const applicableAddons = useMemo(() => addonsForKind(productKind), [productKind])
 
@@ -218,7 +224,7 @@ export default function BuilderPage() {
   const requiredTextMissing = isHouseSign
     ? !signText.trim()
     : isPlate
-      ? !registration.trim()
+      ? !registration.trim() || (isLuxuryHolderBundle && !holderText.trim())
       : isHolder
         ? !holderRegistration.trim() || (isLuxuryHolder && !holderText.trim())
         : false
@@ -265,7 +271,7 @@ export default function BuilderPage() {
       plateStyle: styleLabel,
       plateType: isPlate ? plateType : undefined,
       configuration: isPlate && !configOption ? configuration : undefined,
-      holderText: isLuxuryHolder ? holderText : undefined,
+      holderText: hasLuxuryHolder ? holderText : undefined,
       signText: isHouseSign ? signText : undefined,
       writingColour: isHouseSign ? writingColour : undefined,
       backgroundColour: isHouseSign ? backgroundColour : undefined,
@@ -342,32 +348,33 @@ export default function BuilderPage() {
         <section className="builder-workspace">
           <div className="builder-preview-panel">
             {showPlatePreview && (
-              <>
-                <PlatePreview registration={registration} styleLabel={styleLabel} side={plateSide} />
-                <div className="builder-side-toggle" aria-label="Plate side preview">
-                  <button
-                    type="button"
-                    className={plateSide === 'front' ? 'is-active' : ''}
-                    onClick={() => setPlateSide('front')}
-                  >
-                    Front
-                  </button>
-                  <button
-                    type="button"
-                    className={plateSide === 'rear' ? 'is-active' : ''}
-                    onClick={() => setPlateSide('rear')}
-                  >
-                    Rear
-                  </button>
-                </div>
-              </>
+              <PlatePreview registration={registration} styleLabel={styleLabel} side={plateSide} />
             )}
             {showLuxuryHolderPreview && (
               <PlateHolderPreview
                 holderText={holderText}
-                registration={holderRegistration}
+                registration={isLuxuryHolderBundle ? registration : holderRegistration}
                 styleLabel={styleLabel}
+                side={isLuxuryHolderBundle ? plateSide : 'rear'}
               />
+            )}
+            {isPlate && (
+              <div className="builder-side-toggle" aria-label="Plate side preview">
+                <button
+                  type="button"
+                  className={plateSide === 'front' ? 'is-active' : ''}
+                  onClick={() => setPlateSide('front')}
+                >
+                  Front
+                </button>
+                <button
+                  type="button"
+                  className={plateSide === 'rear' ? 'is-active' : ''}
+                  onClick={() => setPlateSide('rear')}
+                >
+                  Rear
+                </button>
+              </div>
             )}
             {showStandardHolderPreview && (
               <PlatePreview registration={holderRegistration} styleLabel={styleLabel} side="rear" />
@@ -379,7 +386,7 @@ export default function BuilderPage() {
                 alt={productAlt(product, variant?.title)}
                 width={productPreviewImage.width ?? 900}
                 height={productPreviewImage.height ?? 675}
-                loading={showPlatePreview || isHolder ? 'lazy' : 'eager'}
+                loading={isPlate || isHolder ? 'lazy' : 'eager'}
                 decoding="async"
               />
             )}
@@ -491,7 +498,7 @@ export default function BuilderPage() {
               </section>
             )}
 
-            {isLuxuryHolder && (
+            {hasLuxuryHolder && (
               <section className="builder-card" aria-labelledby="holder-text-heading">
                 <h2 id="holder-text-heading">Holder text</h2>
                 <label className="field-label" htmlFor="holder-text">
