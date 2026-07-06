@@ -171,8 +171,9 @@ export default function BuilderPage() {
   const isPlate = productKind === 'plate'
   const isHolder = productKind === 'holder'
   const productSearchText = `${product?.title ?? ''} ${product?.productType ?? ''}`
+  // "surr?ou?nds?" also catches the "SURRONDS" misspelling used in Shopify titles.
   const mentionsLuxuryHolder =
-    /\blux(?:u|e)ry\b/i.test(productSearchText) && /\b(holders?|surrounds?)\b/i.test(productSearchText)
+    /\blux(?:u|e)ry\b/i.test(productSearchText) && /\b(holders?|surr?ou?nds?)\b/i.test(productSearchText)
   const isLuxuryHolder = isHolder && mentionsLuxuryHolder
   // Plate + luxury holder bundles stay plates for the form fields, but the
   // preview and holder text follow the luxury holder they include.

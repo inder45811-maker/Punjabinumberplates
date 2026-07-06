@@ -12,6 +12,8 @@ export interface CategoryDefinition {
   shortLabel: string
   description: string
   collectionHandles: string[]
+  /** Products shown in this category even though they sit in no Shopify collection. */
+  extraProductHandles?: string[]
   seoTitle: string
   seoDescription: string
   /** Local image that overrides the Shopify preview on the category tile. */
@@ -24,7 +26,12 @@ export const categories = [
     label: 'Number Plates',
     shortLabel: 'Plates',
     description: 'Road legal and show plate styles pulled live from Shopify.',
-    collectionHandles: ['road-legal-number-plates', 'showplates'],
+    collectionHandles: ['road-legal-number-plates', 'showplates', '4d-business-logo-plates'],
+    extraProductHandles: [
+      '2d-oversize-printed-plates',
+      '4d-6mm-elevate-number-plates',
+      'x2-bevel-road-legal-short-plates',
+    ],
     seoTitle: 'Custom 3D Gel & 4D Number Plates | The Number Plate Shop',
     seoDescription:
       'Shop custom road legal and show number plates from The Number Plate Shop with live Shopify prices and secure checkout.',
@@ -35,6 +42,10 @@ export const categories = [
     shortLabel: 'Plate Holders',
     description: 'Premium 3D gel plate holders — one for £45 or two for £85.',
     collectionHandles: ['plate-holders'],
+    extraProductHandles: [
+      '4d-road-legal-plates-x2-luxury-plate-holders',
+      '4d-gel-plates-pair-4d-luxury-surronds',
+    ],
     seoTitle: 'Luxury Plate Holders & 3D Gel Holders | The Number Plate Shop',
     seoDescription:
       'Browse luxury plate holders and 3D gel holders with real-time Shopify pricing from The Number Plate Shop.',
@@ -56,6 +67,7 @@ export const categories = [
     shortLabel: 'Accessories',
     description: 'Badges, decals, and finishing details for custom builds.',
     collectionHandles: ['accessories'],
+    extraProductHandles: ['2x-punjab-4d-black-white-symbol-badges-decals-111x45mm'],
     seoTitle: 'Number Plate Accessories & Badges | The Number Plate Shop',
     seoDescription:
       'Shop number plate accessories, symbols, badges, and decals from The Number Plate Shop.',
@@ -101,7 +113,7 @@ export function productKindFor(product: { title?: string; productType?: string }
   // A plate + holder bundle still contains road-legal plates, so it needs a
   // registration — keep it a plate even though "holder" appears in the title.
   if (/\bplates?\b/.test(text) && /(\bbundle\b|\+)/.test(text)) return 'plate'
-  if (/\b(holders?|surrounds?)\b/.test(text)) return 'holder'
+  if (/\b(holders?|surr?ou?nds?)\b/.test(text)) return 'holder'
   if (/\bplates?\b/.test(text)) return 'plate'
   // Default to a simple accessory layout rather than wrongly showing plate
   // options on an unrecognised product.

@@ -3,7 +3,11 @@ import { Link, Navigate, useParams } from 'react-router'
 import { ArrowLeft, Loader2 } from 'lucide-react'
 import ProductCard from '../components/ProductCard'
 import { categoryBySlug, type CategorySlug } from '../lib/catalog'
-import { getProductsByCollectionHandles, type StorefrontProduct } from '../lib/shopify'
+import {
+  getProductsByCollectionHandles,
+  getProductsByHandles,
+  type StorefrontProduct,
+} from '../lib/shopify'
 import { useSeo } from '../lib/seo'
 
 function isCategorySlug(value: string | undefined): value is CategorySlug {
@@ -26,6 +30,7 @@ export default function CategoryPage() {
   })
 
   const handles = useMemo(() => category?.collectionHandles ?? [], [category])
+  const extraHandles = useMemo(() => category?.extraProductHandles ?? [], [category])
 
   useEffect(() => {
     if (!category) return
@@ -39,9 +44,12 @@ export default function CategoryPage() {
       }
     })
 
-    getProductsByCollectionHandles(handles)
-      .then((items) => {
-        if (!cancelled) setProducts(items)
+    Promise.all([getProductsByCollectionHandles(handles), getProductsByHandles(extraHandles)])
+      .then(([collectionItems, extraMap]) => {
+        if (cancelled) return
+        const seen = new Set(collectionItems.map((product) => product.id))
+        const extras = Array.from(extraMap.values()).filter((product) => !seen.has(product.id))
+        setProducts([...collectionItems, ...extras])
       })
       .catch((err) => {
         console.error('Failed to load category products:', err)
@@ -54,7 +62,7 @@ export default function CategoryPage() {
     return () => {
       cancelled = true
     }
-  }, [category, handles])
+  }, [category, handles, extraHandles])
 
   if (!category) return <Navigate to="/" replace />
 
