@@ -257,11 +257,27 @@ async function storefront<T>(
     body: JSON.stringify({ query, variables }),
   })
 
+  // Shopify sometimes answers with an HTML bot-challenge or error page instead
+  // of GraphQL JSON (seen from in-app browsers on tokenless requests). Parsing
+  // that blindly throws a cryptic browser error ("The string did not match the
+  // expected pattern." on iOS) straight into the customer-facing banner.
+  const raw = await res.text()
+  let json: StorefrontResponse<T> | undefined
+  try {
+    json = JSON.parse(raw) as StorefrontResponse<T>
+  } catch {
+    json = undefined
+  }
+
+  if (!json) {
+    console.error(`Shopify returned a non-JSON response (${res.status})`, raw.slice(0, 300))
+    throw new Error(
+      'Shopify could not process this request. Please wait a moment and try again — if it keeps happening, open the site in Safari or Chrome instead of the in-app browser.'
+    )
+  }
   if (!res.ok) {
     throw new Error(`Shopify API error: ${res.status} ${res.statusText}`)
   }
-
-  const json = (await res.json()) as StorefrontResponse<T>
   if (json.errors?.length) {
     throw new Error(json.errors.map((e) => e.message).join(', '))
   }
