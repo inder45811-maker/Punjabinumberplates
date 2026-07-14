@@ -472,9 +472,8 @@ function ContactFormAndStore() {
   const currentDay = now.getDay() // 0 = Sunday
 
   const hours = [
-    { label: 'MONDAY \u2014 FRIDAY', time: '9:00 AM \u2013 6:00 PM', dayCheck: (d: number) => d >= 1 && d <= 5 },
-    { label: 'SATURDAY', time: '10:00 AM \u2013 4:00 PM', dayCheck: (d: number) => d === 6 },
-    { label: 'SUNDAY', time: 'CLOSED', dayCheck: (d: number) => d === 0 },
+    { label: 'MONDAY \u2014 SATURDAY', time: '9:00 AM \u2013 7:00 PM', dayCheck: (d: number) => d >= 1 && d <= 6 },
+    { label: 'SUNDAY', time: '10:00 AM \u2013 5:00 PM', dayCheck: (d: number) => d === 0 },
   ]
 
   return (
@@ -648,9 +647,9 @@ function ContactFormAndStore() {
             }}
           >
             <div>THE NUMBER PLATE SHOP</div>
-            <div>Unit 7, PNP Industrial Estate</div>
-            <div>47-49 Northern Road</div>
-            <div>London, N7 9BG</div>
+            <div>12 Ensdale Row</div>
+            <div>Willenhall</div>
+            <div>WV13 2BJ</div>
           </div>
 
           {/* Hours Table */}
@@ -714,8 +713,8 @@ function ContactFormAndStore() {
             }}
           >
             <iframe
-              title="Apex Plates Showroom Location"
-              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d2480.5!2d-0.1133!3d51.5514!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2zNTHCsDMzJzA1LjAiTiAwwrAwNic0Ny45Ilc!5e0!3m2!1sen!2suk!4v1"
+              title="The Number Plate Shop Location"
+              src="https://www.google.com/maps?q=12+Ensdale+Row,+Willenhall,+WV13+2BJ&output=embed"
               width="100%"
               height="100%"
               style={{ border: 0, filter: 'invert(0.9) hue-rotate(180deg)', minHeight: '100%' }}
@@ -728,7 +727,7 @@ function ContactFormAndStore() {
           {/* Contact Details */}
           <div style={{ marginTop: '24px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
             <a
-              href="mailto:hello@punjabinumberplates.co.uk"
+              href="mailto:infopunjabinumberplates@gmail.com"
               style={{
                 fontFamily: "'Inter', system-ui, sans-serif",
                 fontSize: '0.9rem',
@@ -743,10 +742,10 @@ function ContactFormAndStore() {
                 e.currentTarget.style.color = TOKENS.textPrimary
               }}
             >
-              &#9993; hello@punjabinumberplates.co.uk
+              &#9993; infopunjabinumberplates@gmail.com
             </a>
             <a
-              href="tel:02079460958"
+              href="tel:07384088600"
               style={{
                 fontFamily: "'Inter', system-ui, sans-serif",
                 fontSize: '0.9rem',
@@ -754,7 +753,7 @@ function ContactFormAndStore() {
                 textDecoration: 'none',
               }}
             >
-              &#9742; 020 7946 0958
+              &#9742; 07384 088600
             </a>
             <a
               href="https://wa.me/447384088600"
@@ -1163,7 +1162,7 @@ function CTABanner() {
             lineHeight: 1.6,
           }}
         >
-          Nothing beats seeing our plates in the metal. Drop by our London
+          Nothing beats seeing our plates in the metal. Drop by our Willenhall
           showroom and speak to the team.
         </p>
         <p
@@ -1175,8 +1174,7 @@ function CTABanner() {
             lineHeight: 1.6,
           }}
         >
-          THE NUMBER PLATE SHOP, Unit 7, PNP Industrial Estate, 47-49 Northern Road,
-          London N7 9BG
+          THE NUMBER PLATE SHOP, 12 Ensdale Row, Willenhall, WV13 2BJ
         </p>
         <div
           style={{
@@ -1188,7 +1186,7 @@ function CTABanner() {
           }}
         >
           <a
-            href="https://www.google.com/maps/search/?api=1&query=51.5514,-0.1133"
+            href="https://www.google.com/maps/search/?api=1&query=12+Ensdale+Row+Willenhall+WV13+2BJ"
             target="_blank"
             rel="noopener noreferrer"
             style={{
@@ -1216,7 +1214,7 @@ function CTABanner() {
             GET DIRECTIONS
           </a>
           <a
-            href="tel:02079460958"
+            href="tel:07384088600"
             style={{
               padding: '16px 32px',
               borderRadius: '9999px',
